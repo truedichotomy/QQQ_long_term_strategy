@@ -9,14 +9,14 @@ trading_periods_per_year = 52
 ticker = "VOO"  #2021-08-19
 investment_initial = 3637.98; # where we are starting from
 investment_annual = (100.0-9.0)*405   # aiming to gain 91 shares of VOO
-fund_historical_performance_frac = 0.16
+fund_historical_performance_frac = 0.15
 fund_added_performance_frac = 0.10
 
-# ticker = "QQQ" #2021-08-19
-# investment_initial = 5461.35+7275.6; # where we are starting from
-# investment_annual = (200.0-35.0)*365 # aiming to gain 91 shares of VOO
-# fund_historical_performance_frac = 0.23
-# fund_added_performance_frac = 0.07
+ticker = "QQQ" #2021-08-19
+investment_initial = 5461.35+7275.6; # where we are starting from
+investment_annual = (200.0-35.0)*365 # aiming to gain 91 shares of VOO
+fund_historical_performance_frac = 0.21
+fund_added_performance_frac = 0.10
 
 # ticker = "QQQ" #hypothetical
 # investment_initial = 100000; # where we are starting from
