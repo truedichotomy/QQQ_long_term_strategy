@@ -5,9 +5,16 @@
 # ETF to invest: VOO (S&P 500 index fund from Vanguard)
 
 ticker = "VOO"
-
 investment_initial = 3634.56; # where we are starting from
 investment_annual = (100.0-9.0)*403.84 # aiming to gain 91 shares of VOO
+fund_historical_performance_frac = 0.16
+fund_added_performance_frac = 0.07
+
+#ticker = "QQQ"
+#investment_initial = 7277.20; # where we are starting from
+#investment_annual = (100.0-20.0)*363.86 # aiming to gain 91 shares of VOO
+#fund_historical_performance_frac = 0.23
+#fund_added_performance_frac = 0.07
 
 #investment_initial = 50000.0;
 #investment_annual = 6000.0;
@@ -15,8 +22,7 @@ investment_annual = (100.0-9.0)*403.84 # aiming to gain 91 shares of VOO
 principal = investment_initial+investment_annual
 
 trading_weeks_per_year = 52
-fund_historical_performance_frac = 0.16 # 16 percent per year is the 10 year average for VOO
-added_performance_frac = 0.10
+added_performance_frac = fund_added_performance_frac
 
 #investment_annual_boost_frac = investment_annual / investment_initial;
 #investment_expected_performance_frac = fund_historical_performance_frac + investment_annual_boost_frac;
@@ -25,7 +31,10 @@ added_performance_frac = 0.10
 investment_goal = (investment_initial + investment_annual) * (1.0 + fund_historical_performance_frac);
 
 # this is the desired interest rate on investment on a weekly basis
-weekly_rate = (fund_historical_performance_frac + added_performance_frac) / Float64(trading_weeks_per_year)
+weekly_historical_rate = (1.0 + fund_historical_performance_frac) ^ (1/Float64(trading_weeks_per_year)) - 1.0;
+weekly_boosted_rate = added_performance_frac / (Float64(trading_weeks_per_year));
+weekly_rate = weekly_historical_rate + weekly_boosted_rate
+#weekly_rate = (fund_historical_performance_frac + added_performance_frac) / (Float64(trading_weeks_per_year))
 
 # calculate the investment amount and the total for each week during a year
 investment_now = Array{Float64}(undef,trading_weeks_per_year+1);
