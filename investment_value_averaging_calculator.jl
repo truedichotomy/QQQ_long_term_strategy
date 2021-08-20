@@ -7,16 +7,18 @@
 trading_periods_per_year = 52
 
 ticker = "VOO"  #2021-08-19
+share_price_initial = 405;
 investment_initial = 3637.98; # where we are starting from
-investment_annual = (100.0-9.0)*405   # aiming to gain 91 shares of VOO
+investment_annual = (100.0-9.0)*share_price_initial;   # aiming to gain 91 shares of VOO
 fund_historical_performance_frac = 0.15
-fund_added_performance_frac = 0.10
+fund_added_performance_frac = 0.10;
 
 ticker = "QQQ" #2021-08-19
+share_price_initial = 365;
 investment_initial = 5461.35+7275.6; # where we are starting from
-investment_annual = (200.0-35.0)*365 # aiming to gain 91 shares of VOO
+investment_annual = (200.0-35.0)*share_price_initial; # aiming to gain 91 shares of VOO
 fund_historical_performance_frac = 0.21
-fund_added_performance_frac = 0.10
+fund_added_performance_frac = 0.10;
 
 # ticker = "QQQ" #hypothetical
 # investment_initial = 100000; # where we are starting from
@@ -44,15 +46,18 @@ investment_now = Array{Float64}(undef,trading_periods_per_year+1);
 investment_now[1] = investment_initial;
 investment_target_change = Array{Float64}(undef,trading_periods_per_year+1);
 investment_target_change[1] = 0.0;
+share_price = Array{Float64}(undef,trading_periods_per_year+1);
+share_price[1] = share_price_initial;
 trading_period = collect(0:trading_periods_per_year);
 
 for ii = 1:trading_periods_per_year
     investment_target_change[ii+1] = (investment_now[ii] * target_rate) + (investment_annual / trading_periods_per_year);
     investment_now[ii+1] = investment_now[ii] + investment_target_change[ii+1];
+    share_price[ii+1] = share_price[ii] * (1.0 + target_rate);
 end
 investment_final = investment_now[end]
 
 investment_performance = investment_final / principal
 
 # printout of the investment strategy for value averaging
-[trading_period round.(investment_target_change) round.(investment_now)];
+[trading_period round.(investment_target_change) round.(investment_now) share_price];
