@@ -8,38 +8,42 @@ trading_periods_per_year = 52
 
 ticker = "VOO"  #2021-08-19
 share_price_initial = 405;
-investment_initial = 3637.98; # where we are starting from
-investment_annual = (100.0-9.0)*share_price_initial;   # aiming to gain 91 shares of VOO
 fund_historical_performance_frac = 0.15
-fund_added_performance_frac = 0.10;
+    fund_target_performance_frac = 0.25
+    fund_added_performance_frac = fund_target_performance_frac - fund_historical_performance_frac
+investment_initial = 3637.98; # where we are starting from
+investment_annual = (100.0-9.0)*share_price_initial*(1.0+fund_historical_performance_frac);   # aiming to gain 91 shares of VOO
 
 ticker = "QQQ" #2021-08-19
 share_price_initial = 365;
-investment_initial = 5461.35+7275.6; # where we are starting from
-investment_annual = (200.0-35.0)*share_price_initial; # aiming to gain 91 shares of VOO
 fund_historical_performance_frac = 0.21
-fund_added_performance_frac = 0.10;
+    fund_target_performance_frac = 0.35
+    fund_added_performance_frac = fund_target_performance_frac - fund_historical_performance_frac
+investment_initial = 5461.35+7275.6; # where we are starting from
+investment_annual = (200.0-35.0)*share_price_initial*(1.0+fund_historical_performance_frac); # aiming to gain 91 shares of VOO
 
-# ticker = "QQQ" #hypothetical
-# investment_initial = 100000; # where we are starting from
-# investment_annual = 5000 # aiming to gain 91 shares of VOO
-# fund_historical_performance_frac = 0.23
-# fund_added_performance_frac = 0.0
+ticker = "QQQ" #hypothetical
+fund_historical_performance_frac = 0.21
+    fund_target_performance_frac = fund_historical_performance_frac+0.1
+    fund_added_performance_frac = fund_target_performance_frac - fund_historical_performance_frac
+investment_initial = 100000; # where we are starting from
+investment_annual = 0 # 
 
 principal = investment_initial+investment_annual
-added_performance_frac = fund_added_performance_frac
 
 #investment_annual_boost_frac = investment_annual / investment_initial;
 #investment_expected_performance_frac = fund_historical_performance_frac + investment_annual_boost_frac;
 
-# optimistic estimation of investment_goal assuming lump sum investment of investment_annual at the beginning of year:
-investment_goal = (investment_initial + investment_annual) * (1.0 + fund_historical_performance_frac);
+# expected lump sum investment return based on historical average:
+expected_investment_return = principal * (1.0 + fund_historical_performance_frac);
 
-# this is the desired interest rate on investment on a weekly basis
+# this is the desired compound interest rate on investment on a weekly basis, 
 historical_rate = (1.0 + fund_historical_performance_frac) ^ (1/Float64(trading_periods_per_year)) - 1.0;
-boosted_rate = added_performance_frac / (Float64(trading_periods_per_year));
+#boosted_rate = fund_added_performance_frac / (Float64(trading_periods_per_year));
+boosted_rate = (1.0 + fund_added_performance_frac) ^ (1/Float64(trading_periods_per_year)) - 1.0
 target_rate = historical_rate + boosted_rate
-#weekly_rate = (fund_historical_performance_frac + added_performance_frac) / (Float64(trading_weeks_per_year))
+target_rate2 = (1.0 + fund_target_performance_frac) ^ (1/Float64(trading_periods_per_year)) - 1.0
+#weekly_rate = (fund_historical_performance_frac + fund_added_performance_frac) / (Float64(trading_weeks_per_year))
 
 # calculate the investment amount and the total for each week during a year
 investment_now = Array{Float64}(undef,trading_periods_per_year+1);
