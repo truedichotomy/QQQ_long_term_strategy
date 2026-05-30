@@ -4,23 +4,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A personal quantitative investment analysis project written in Julia (`.jl` scripts run directly, not a package). There is no build system, test suite, or Julia project environment (`Project.toml`/`Manifest.toml`) — scripts are run top-to-bottom and inspected interactively. Julia is **not currently installed** on this machine.
+A personal quantitative investment analysis project written in Julia (`.jl` scripts run directly, not a package). There is no build system or test suite. Julia **is** installed, but at `~/.juliaup/bin/julia` and **not on `PATH`** — prefix it (`export PATH="$HOME/.juliaup/bin:$PATH"`) or call the full path. The global package env is empty, so prefer **pure base Julia + stdlib** (`Statistics`, `Printf`, `Dates`) and avoid adding heavy packages (CSV/DataFrames/Plots) unless asked — the `analysis/` pipeline parses CSVs and renders charts (SVG) with zero dependencies on purpose.
 
 ## Running scripts
 
 ```bash
-julia old/QQQ_analysis.jl          # run a whole script
-julia                              # then include("old/QQQ_analysis.jl") in the REPL to keep results live
+export PATH="$HOME/.juliaup/bin:$PATH"
+julia --startup-file=no analysis/run_analysis.jl   # the QQQ technical-strategy study (see analysis/README.md)
+julia --startup-file=no analysis/plot_results.jl   # render results/equity_curves.svg
+julia old/QQQ_analysis.jl                          # legacy script (needs CSV/DataFrames/Plots installed)
 ```
 
-Scripts are meant to be explored in the REPL: most end on a bare expression (e.g. the results table or a final value) that is the "output." Re-run from the REPL rather than the shell so the variables stay inspectable. `QQQ_analysis.jl` depends on `CSV, Dates, DataFrames, Statistics, Plots`; the calculators use only base Julia. Install missing packages with `import Pkg; Pkg.add("...")`.
+The legacy `old/` scripts are meant to be explored in the REPL — most end on a bare expression that is the "output"; `include(...)` them to keep variables live. They depend on `CSV, Dates, DataFrames, Statistics, Plots`. The `analysis/` pipeline runs fine from the shell and writes artifacts to `analysis/results/`.
 
 ## Repository layout (mid-reorganization)
 
-The working tree is being restructured (these moves are uncommitted):
+The working tree is being restructured (the `old/`→`data/`/`analysis/` moves are uncommitted):
 - `old/` — the original 2024 scripts and data. Treat as legacy/reference.
 - `data/` — current data: per-ETF historical CSVs for **DIA, GLD, IWM, QQQ, SPY, TIP, TLT, XLE**. Filenames encode the range as `TICKER (ENDtimestamp _ STARTtimestamp).csv` (17-digit zero-padded `YYYYMMDD...`).
-- `analysis/` — empty; intended home for new analysis scripts written against `data/`.
+- `analysis/` — the current backtesting toolkit (`QQQBacktest` module: `src/{data,indicators,engine,metrics,strategies,crossasset,evaluate}.jl`) plus driver scripts. It backtests **long/flat** technical strategies on daily QQQ, judging them on CAGR **and** max drawdown vs buy-and-hold, with rolling multi-timescale robustness checks. Signals are lagged one day (no look-ahead); cash earns a configurable rate; turnover is charged a cost. The chosen strategy is a QQQ 50/200 SMA trend filter in two variants — **Standard** (`fast_reentry`: re-enter when price reclaims the 50-day SMA, ~10-day min hold) as the central strategy and **Conservative** (`sma_cross` 50/200 golden cross) as the lower-turnover alternative; execution guide in `analysis/STRATEGY.md`, study writeup in `analysis/README.md`. Note: `fast_reentry` MUST keep its `hold` parameter (default 10) — without the minimum-hold it whipsaws ~33×/yr. Drivers: `run_analysis.jl` (sweep/rank), `cross_asset_analysis.jl` (other ETFs informing QQQ + generality), `report.jl` (per-year/decade/regime), `signal.jl` (current live signal), `plot_results.jl` (SVG chart). Outputs land in `analysis/results/`.
 
 ## The two models (they are unrelated — don't conflate them)
 
