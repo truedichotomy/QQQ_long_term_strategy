@@ -51,6 +51,29 @@ periods = [("Dot-com crash", 2000, 3, 10, 2002, 10, 9), ("Mid-2000s recovery", 2
            ("COVID crash", 2020, 2, 19, 2020, 3, 23), ("Post-COVID surge", 2020, 3, 23, 2021, 11, 19),
            ("2022 bear", 2021, 11, 19, 2022, 12, 28), ("2023–2026 recovery", 2022, 12, 28, year(d.date[end]), 12, 31)]
 
+# Cross-asset ranking on a common 2005+ window, each asset's best variant by Sharpe.
+const UNIVERSE = ("QQQ", "VGT", "SOXX", "SPY", "DIA", "IWM", "XLE", "TLT", "GLD", "TIP")
+function wm_ra(eq, dts, a, b)
+    es = eq[a:b] ./ eq[a]; m = length(es); yrs = max(Dates.value(dts[b] - dts[a]) / 365.25, 1e-9)
+    er = [es[i] / es[i - 1] - 1 for i in 2:m]; rfd = (1 + RF)^(1 / 252) - 1
+    μ = mean(er); σ = std(er); dn = sqrt(mean(x -> min(x - rfd, 0.0)^2, er)); mdd = max_drawdown(es)
+    cagr = es[end]^(1 / yrs) - 1
+    return (cagr=cagr, maxdd=mdd, vol=σ * sqrt(252), sharpe=(μ - rfd) / σ * sqrt(252),
+            sortino=(μ - rfd) / dn * sqrt(252), calmar=cagr / abs(mdd))
+end
+rank_rows = []
+for t in UNIVERSE
+    et = load_ticker(t; dir=joinpath(dirname(@__DIR__), "data"))
+    a, b = date_range(et, Date(2005, 1, 3), et.date[end])
+    bestv = nothing
+    for (nm, sig) in (("Standard", fast_reentry(et)), ("Conservative", sma_cross(et; fast=50, slow=200)))
+        mm = wm_ra(run_backtest(et, sig; cost=COST, rf_annual=RF).eq, et.date, a, b)
+        (bestv === nothing || mm.sharpe > bestv.m.sharpe) && (bestv = (t=t, v=nm, m=mm))
+    end
+    push!(rank_rows, bestv)
+end
+sort!(rank_rows; by=r -> -r.m.sharpe)
+
 io = IOBuffer()
 print(io, """<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -209,9 +232,9 @@ print(io, """<h2>4 · The Conservative variant — when to prefer it</h2>
 
 # §5 why QQQ
 print(io, """<h2>5 · Why QQQ specifically</h2>
-<p>We ran the same 50/200 filter on all eight ETFs in the dataset. The drawdown protection is <b>universal</b>; the return boost is <b>not</b>.</p>
+<p>We ran the same 50/200 filter on all ten ETFs in the dataset. The drawdown protection is <b>universal</b>; the return boost is <b>not</b>.</p>
 <table><thead><tr><th>ETF</th><th class="num">B&amp;H CAGR / maxDD</th><th class="num">filter CAGR / maxDD</th><th class="num">ΔCAGR</th><th class="num">ΔmaxDD</th></tr></thead><tbody>""")
-for t in ("QQQ", "SPY", "DIA", "IWM", "XLE", "TLT", "GLD", "TIP")
+for t in ("QQQ", "VGT", "SOXX", "SPY", "DIA", "IWM", "XLE", "TLT", "GLD", "TIP")
     et = load_ticker(t; dir=joinpath(dirname(@__DIR__), "data"))
     mb = compute_metrics(run_backtest(et, buyhold(et); cost=COST, rf_annual=RF))
     mf = compute_metrics(run_backtest(et, sma_cross(et; fast=50, slow=200); cost=COST, rf_annual=RF))
@@ -223,8 +246,24 @@ print(io, """</tbody></table>
 <p>The filter gave a shallower drawdown on <b>every</b> ETF, but only <i>added</i> return on high-momentum, deep-crash assets — QQQ, energy (XLE), long bonds (TLT/TIP) — while it <i>hurt</i> choppier indices like small-caps (IWM) and the Dow (DIA). QQQ is the standout equity beneficiary precisely because it trends hard and crashes hard.</p>
 <div class="note">We also tested using the other ETFs to <b>inform</b> QQQ timing (broad-market confirmation, small-cap breadth, risk-on/off vs bonds). All of them <b>reduced</b> return by adding conservatism — QQQ's own trend already encodes the regime. Don't over-engineer it.</div>""")
 
-# §6 execution
-print(io, """<h2>6 · How to execute (Standard variant)</h2>
+# §6 cross-asset ranking
+print(io, """<h2>6 · Which asset to invest in — cross-asset risk-adjusted ranking</h2>
+<p>If you can hold only one fund, which deserves the capital? We applied each asset's <b>better variant</b> (Standard or Conservative, whichever has the higher Sharpe) and ranked all ten ETFs by risk-adjusted return over a <b>common 2005+ window</b> — the period where every ETF has data, for a fair apples-to-apples comparison. Up-and-to-the-left is better:</p>
+<figure>$(inline_svg("risk_return.svg"))
+<figcaption>Each point is one ETF running its optimized variant; dashed lines are equal-Calmar (return-per-drawdown) contours. QQQ and SOXX sit alone on the efficient frontier.</figcaption></figure>
+<table><thead><tr><th>#</th><th>asset</th><th>best variant</th><th class="num">CAGR</th><th class="num">maxDD</th><th class="num">vol</th><th class="num">Sharpe</th><th class="num">Sortino</th><th class="num">Calmar</th></tr></thead><tbody>""")
+for (i, r) in enumerate(rank_rows)
+    cls = r.t in ("QQQ", "SOXX") ? " class=\"hi\"" : ""
+    print(io, "<tr$cls><td>$i</td><td><b>$(r.t)</b></td><td>$(r.v)</td><td class=\"num\">$(pct(r.m.cagr))</td><td class=\"num\">$(pct(r.m.maxdd;d=0))</td><td class=\"num\">$(pct(r.m.vol;d=0))</td><td class=\"num\">$(round(r.m.sharpe;digits=2))</td><td class=\"num\">$(round(r.m.sortino;digits=2))</td><td class=\"num\">$(round(r.m.calmar;digits=2))</td></tr>")
+end
+print(io, """</tbody></table>
+<p><b>The pick: QQQ, run with the Standard variant.</b> SOXX and QQQ are effectively tied for the top Sharpe (≈0.63 vs 0.62 — within statistical noise) and miles ahead of everything else. SOXX has the higher raw return and Sharpe, but QQQ wins on the measures that matter most for a single concentrated position: the <b>shallowest drawdown</b> (−29% vs −34%), <b>lowest volatility</b> (18% vs 23%), the <b>best Calmar</b> (0.50), and far more diversification — 100 Nasdaq-100 names versus SOXX's ~30 semiconductors. Sharpe doesn't price in single-industry concentration; QQQ delivers near-identical risk-adjusted performance without betting everything on one violently cyclical sector.</p>
+<p><b>SOXX (Conservative) is the aggressive alternative</b> — highest return (16.8%/yr) and top Sharpe if you can stomach the volatility and concentration. Note its winning variant is the <i>Conservative</i> rule: semiconductors are so choppy that fast re-entry catches too many failed bounces (the asset-dependent pattern from §4).</p>
+<div class="note"><b>Out-of-sample check (walk-forward).</b> We re-validated the top picks the hard way — train on each asset's first ~5 years, trade the rest. <b>SOXX confirms strongly:</b> out-of-sample (2006–2026, with the 2001–02 semi crash held out of the test) the Conservative variant still returned <b>18.5%/yr vs buy-and-hold's 19.0% at half the drawdown</b> (−34% vs −67%; Sharpe 0.86 vs 0.72), and the Conservative-beats-Standard pick held up. <b>QQQ likewise</b> (§3). <b>VGT is the caveat:</b> its data starts only in 2004, so its out-of-sample window (2009–2026) is an almost-pure bull market with no deep bear to dodge — there buy-and-hold beat both variants outright (Sharpe 0.99 vs 0.82). VGT's #3 rank above leans on its 2005+ window <i>including</i> 2008; treat it as less robust than SOXX/QQQ. (As everywhere: adaptive re-optimization underperformed the fixed rule, and the filter's value is contingent on a bear market being in the window.)</div>
+<div class="warn"><b>Read with care.</b> This ranks on a common 2005+ window (which excludes the dot-com crash — a "modern era" view) and picks each asset's best variant in-sample (mildly optimistic, though the picks follow the choppiness logic, not curve-fitting). Sharpe gaps of ~0.01 are noise. Bonds/gold (TLT/TIP/GLD) score low because 2005+ was a poor regime for them, not a permanent verdict. Concentrating in one tech-heavy fund is itself a risk the timing overlay does not remove.</div>""")
+
+# §7 execution
+print(io, """<h2>7 · How to execute (Standard variant)</h2>
 <h3>Inputs &amp; routine</h3>
 <p>You need only QQQ's <b>daily closing price</b>. After the close, update the 50- and 200-day moving averages (or run <code>julia analysis/signal.jl</code>) and apply the rule:</p>
 <ul>

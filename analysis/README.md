@@ -21,8 +21,18 @@ julia analysis/report.jl              # per-year / per-decade / per-regime break
 julia analysis/plot_results.jl        # equity + drawdown chart                → results/equity_curves.svg
 julia analysis/plot_hybrid.jl         # B&H vs fixed 50/200 vs fast-reentry     → results/hybrid_vs_fixed.svg
 julia analysis/plot_recent.jl         # last-10-year relative performance       → results/recent_10yr.svg
+julia analysis/plot_hybrid.jl SOXX    # per-ticker chart (any ticker in data/)  → results/hybrid_SOXX.svg
+julia analysis/plot_universe.jl       # cross-asset risk/return scatter (2005+)  → results/risk_return.svg
 julia analysis/build_report.jl        # self-contained HTML report (charts inlined) → results/QQQ_strategy.html
+julia analysis/build_onepager.jl      # one-page print summary → results/QQQ_strategy_1page.html (→ PDF via Chrome)
 ```
+
+One-page PDF: `julia analysis/build_onepager.jl` then
+`'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --headless=new --no-pdf-header-footer --print-to-pdf=analysis/results/QQQ_strategy_1page.pdf file://$PWD/analysis/results/QQQ_strategy_1page.html`
+
+`build_report.jl` inlines the charts from `plot_hybrid`/`plot_recent`/`plot_results`/`plot_universe`,
+so run those first. `signal.jl` and `plot_hybrid.jl` take an optional ticker argument
+(default QQQ) — e.g. `julia analysis/signal.jl VGT`.
 
 Charts are written as **SVG** (zero-dependency). The plot scripts also emit a PNG if
 `rsvg-convert` is on `PATH`. Do **not** rasterize with macOS `qlmanage` — it crops wide

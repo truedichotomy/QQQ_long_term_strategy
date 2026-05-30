@@ -8,8 +8,9 @@ using .QQQBacktest
 using Dates
 
 const OUTDIR = joinpath(@__DIR__, "results")
-const SVG = joinpath(OUTDIR, "hybrid_vs_fixed.svg")
-d = load_ticker("QQQ"; dir=joinpath(dirname(@__DIR__), "data"))
+const TK = isempty(ARGS) ? "QQQ" : uppercase(ARGS[1])
+const SVG = joinpath(OUTDIR, TK == "QQQ" ? "hybrid_vs_fixed.svg" : "hybrid_$(TK).svg")
+d = load_ticker(TK; dir=joinpath(dirname(@__DIR__), "data"))
 bt(s) = run_backtest(d, s; cost=5e-4, rf_annual=0.04).eq
 
 curves = [
@@ -33,9 +34,9 @@ poly(xs, ys, col, w) = string("<polyline fill=\"none\" stroke=\"", col, "\" stro
     "\" points=\"", join((string(round(xs[i]; digits=1), ",", round(ys[i]; digits=1)) for i in eachindex(xs)), " "), "\"/>")
 
 io = IOBuffer()
-print(io, """<svg xmlns="http://www.w3.org/2000/svg" width="$W" height="$H" font-family="Helvetica,Arial,sans-serif">
+print(io, """<svg xmlns="http://www.w3.org/2000/svg" width="$W" height="$H" viewBox="0 0 $W $H" font-family="Helvetica,Arial,sans-serif">
 <rect width="$W" height="$H" fill="white"/>
-<text x="$L" y="20" font-size="17" font-weight="bold">QQQ $(yr[1])–$(yr[end]): Standard (fast re-entry) vs Conservative (50/200) vs buy &amp; hold</text>
+<text x="$L" y="20" font-size="17" font-weight="bold">$TK $(yr[1])–$(yr[end]): Standard (fast re-entry) vs Conservative (50/200) vs buy &amp; hold</text>
 """)
 for k in (1, 2, 5, 10, 20, 50, 100)
     v = log10(k); (v < ymin || v > ymax) && continue

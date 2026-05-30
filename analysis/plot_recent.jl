@@ -43,7 +43,7 @@ poly(ys, col, w) = string("<polyline fill=\"none\" stroke=\"", col, "\" stroke-w
 esc(s) = replace(s, "&" => "&amp;")
 
 io = IOBuffer()
-print(io, """<svg xmlns="http://www.w3.org/2000/svg" width="$W" height="$H" font-family="Helvetica,Arial,sans-serif">
+print(io, """<svg xmlns="http://www.w3.org/2000/svg" width="$W" height="$H" viewBox="0 0 $W $H" font-family="Helvetica,Arial,sans-serif">
 <rect width="$W" height="$H" fill="white"/>
 <text x="$L" y="20" font-size="17" font-weight="bold">QQQ last 10 years ($(yr[1])–$(yr[end])): relative performance, \$1 rebased at start</text>
 """)

@@ -23,9 +23,11 @@ const DATADIR = joinpath(dirname(@__DIR__), "data")
 const OUTDIR  = joinpath(@__DIR__, "results")
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)
 
-d = load_ticker("QQQ"; dir=DATADIR)
+const TK = isempty(ARGS) ? "QQQ" : uppercase(ARGS[1])
+d = load_ticker(TK; dir=DATADIR)
 n = length(d)
 dates = d.date
+@printf("=== Walk-forward / OOS validation: %s (%s … %s) ===\n", TK, dates[1], dates[end])
 
 # ---- candidate grid (what the walk-forward is allowed to choose from) ----
 grid = Tuple{String,Vector{Float64}}[
@@ -87,7 +89,7 @@ wf_anc_cal, ch_anc_cal, _ = walk_forward(n, cand_eq, cand_sr, score_calmar; min_
 wf_rol_cal, ch_rol_cal, _ = walk_forward(n, cand_eq, cand_sr, score_calmar; min_train=MIN_TRAIN, step=STEP, lookback=1260)
 wf_anc_cag, ch_anc_cag, _ = walk_forward(n, cand_eq, cand_sr, score_cagr;   min_train=MIN_TRAIN, step=STEP, lookback=0)
 
-@printf("Out-of-sample window: %s … %s  (%.1f yrs; dot-com crash is in-sample)\n\n",
+@printf("Out-of-sample window: %s … %s  (%.1f yrs; the first ~5 yrs are training/in-sample)\n\n",
         dates[oos_a], dates[n], Dates.value(dates[n] - dates[oos_a]) / 365.25)
 @printf("%-22s %7s %9s %9s %8s %8s %8s\n", "OOS strategy", "CAGR", "total", "maxDD", "Sharpe", "Sortino", "Calmar")
 println("-"^78)
@@ -169,7 +171,7 @@ shortrow("dual-speed",    cand_eq[findfirst(==("dual-speed"), labels)])
 # 5. Promote with discipline: is fast-reentry's edge real OOS and robust to its
 #    re-entry parameter? (full sample vs OOS-2004+; the fixed rule for reference)
 # ============================================================================
-println("\nfast-reentry validation — FULL 1999–2026 vs OOS 2004+ , and re-param robustness:")
+@printf("\nfast-reentry (Standard) validation — FULL %d–%d vs OOS %d+ , and re-param robustness:\n", year(dates[1]), year(dates[n]), year(dates[oos_a]))
 @printf("%-22s | %8s %8s | %8s %8s\n", "strategy", "fullCAGR", "fullDD", "oosCAGR", "oosDD")
 println("-"^66)
 function bothrow(name, sr)
@@ -185,9 +187,10 @@ for re in (20, 30, 50, 75, 100)
     bothrow("fast-reentry re=$re", sr)
 end
 
-# ---- save OOS equity curves + a summary ----
+# ---- save OOS equity curves + a summary (ticker-suffixed except QQQ) ----
 mkpath(OUTDIR)
-open(joinpath(OUTDIR, "walkforward.csv"), "w") do io
+sfx = TK == "QQQ" ? "" : "_$(TK)"
+open(joinpath(OUTDIR, "walkforward$(sfx).csv"), "w") do io
     println(io, "method,oos_cagr,oos_total,oos_maxdd,oos_sharpe,oos_sortino,oos_calmar")
     for (nm, sr) in [("buy_and_hold", cand_sr[BH]), ("fixed_50_200", cand_sr[FIXED]),
                      ("wf_anchored_calmar", wf_anc_cal), ("wf_rolling5y_calmar", wf_rol_cal),
@@ -197,7 +200,7 @@ open(joinpath(OUTDIR, "walkforward.csv"), "w") do io
                 nm, m.cagr, m.total, m.maxdd, m.sharpe, m.sortino, m.calmar)
     end
 end
-open(joinpath(OUTDIR, "walkforward_equity.csv"), "w") do io
+open(joinpath(OUTDIR, "walkforward_equity$(sfx).csv"), "w") do io
     println(io, "date,bh,fixed_50_200,wf_anchored_calmar,wf_rolling5y_calmar")
     eb = equity_from_sr(cand_sr[BH], oos_a, n); ef = equity_from_sr(cand_sr[FIXED], oos_a, n)
     ea = equity_from_sr(wf_anc_cal, oos_a, n);  er = equity_from_sr(wf_rol_cal, oos_a, n)
