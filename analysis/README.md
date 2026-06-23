@@ -29,10 +29,21 @@ adopted **either-on blend**, with the trend- and momentum-filter breakdown:
 Optional ticker argument (default QQQ): `julia analysis/signal.jl QQQ`.
 
 ### Updating the data
-Drop a fresh `QQQ (ENDts _ STARTts).csv` export into `data/` and re-run `signal.jl` — no
-other step. `load_ticker` merges every QQQ file by date (overlap of any size, newest pull
-wins). Only the first 6 columns (Date, OHLC, Volume) are read; any trailing indicator
-columns are ignored and all indicators are recomputed from price.
+Easiest — fetch the latest bars from a free public source (Yahoo Finance, via Julia's
+stdlib `Downloads`; no API key, no data-service website):
+
+```bash
+julia analysis/fetch_data.jl          # QQQ, last 10 trading days → data/
+julia analysis/fetch_data.jl SPY 20   # any ticker, last 20 days
+julia analysis/fetch_data.jl --no-save # just print, don't write
+```
+
+It writes a `data/`-format CSV that `load_ticker` merges by date. Or drop a fresh
+`QQQ (ENDts _ STARTts).csv` export in by hand — same effect. `load_ticker` merges every
+QQQ file by date (overlap of any size, newest pull wins); only the first 6 columns
+(Date, OHLC, Volume) are read and all indicators are recomputed from price. (Running
+`fetch_data.jl` mid-session captures a partial bar for today — run after the close for
+the official daily values.)
 
 ## Repo layout & other scripts
 
@@ -40,6 +51,7 @@ columns are ignored and all indicators are recomputed from price.
 
 ```bash
 julia analysis/signal.jl                # today's signal (above)
+julia analysis/fetch_data.jl            # refresh data/: pull the last 10 trading days (free source, no key)
 julia analysis/build_blend_pages.jl     # execution webpages   → results/blend_either_on.html, blend_avg.html
 julia analysis/blend_finalists_compare.jl  # side-by-side either-on vs avg battery (decision table)
 julia analysis/blend_walkforward.jl     # out-of-sample validation of the blends
@@ -154,6 +166,7 @@ not a better dot-com hedge.
 
 **`analysis/` (root) — production: the two blend cases**
 - `signal.jl` — **the day-to-day tool**: current buy-hold/sell-wait call for the adopted either-on blend + filter breakdown
+- `fetch_data.jl` — pull recent daily OHLCV from a free public source (Yahoo, via stdlib `Downloads`) into `data/`; no API key or data-service site
 - `build_blend_pages.jl` — self-contained execution webpages (`results/blend_either_on.html`, `results/blend_avg.html`)
 - `blend_finalists_compare.jl` / `blend_walkforward.jl` — side-by-side battery and OOS validation (STRATEGY.md §4c)
 - `plot_blend_finalists.jl` — equity + drawdown chart (`results/blend_finalists.svg`)

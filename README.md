@@ -17,9 +17,18 @@ export PATH="$HOME/.juliaup/bin:$PATH"     # Julia lives in ~/.juliaup/bin
 julia --startup-file=no analysis/signal.jl
 ```
 
-Prints the current **buy-hold / sell-wait** call with the two-filter breakdown. To
-refresh, drop a newer `QQQ (…).csv` export into `data/` and re-run — the loader merges
-overlapping pulls by date automatically.
+Prints the current **buy-hold / sell-wait** call with the two-filter breakdown.
+
+To refresh the data first (no manual download, no data-service site), fetch the latest
+bars from a free public source and re-run:
+
+```bash
+julia --startup-file=no analysis/fetch_data.jl   # pull the last 10 trading days of QQQ → data/
+julia --startup-file=no analysis/signal.jl       # signal on the refreshed data
+```
+
+`fetch_data.jl` writes a CSV into `data/` that the loader merges by date automatically
+(newest pull wins on overlap). You can also drop in any `QQQ (…).csv` export by hand.
 
 ## Where things are
 
