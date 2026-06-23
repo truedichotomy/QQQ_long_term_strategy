@@ -264,6 +264,32 @@ of terminal wealth over 10 yr and ~84 % over 20 yr — the cash drag and slightl
 cost real money over long holds. Choose it when a livable −22 % worst case (vs −54 %) matters
 more than the last point of return.
 
+## 4c. The adopted overlay — blending the trend and momentum filters
+
+The SMA fast-reentry filter and the CCI(40) momentum filter fail in *opposite* regimes
+(SMA is blind to fast crashes; CCI is weak in long grinding bears), so blending them
+diversifies the drawdowns. Two blends are the production candidates, both built from the
+same pair (`blend_components`):
+
+- **either-on** (`blend_either_on`) — long if EITHER filter is long. Highest return
+  (≈15% CAGR, 49× since 1999), **~3 trades/yr**, simple all-in/all-out. Keeps the SMA's
+  fast-crash blind spot (−29% in COVID). The low-effort, max-return pick.
+- **avg ½-size** (`blend_avg`) — exposure = (CCI + FR)/2 ∈ {0, ½, 1}. Smoothest ride,
+  cushions *every* crash type (−21% COVID), shallower than B&H in ~99% of rolling 3–5yr
+  windows. Costs ~12 trades/yr and fractional positions.
+
+**Validated OOS** (`analysis/blend_walkforward.jl`): committing to a fixed blend beats
+adaptively re-selecting among {B&H, CCI, FR, avg, either-on} each year (either-on Calmar
+0.47, avg 0.53 vs adaptive 0.46) — and the adaptive selector *only ever picks a blend*,
+never a standalone. Out-of-sample 2004+, either-on edges B&H on return (14.9% vs 14.5%) at
+~half the drawdown.
+
+**Live signal & execution guides:** `julia analysis/signal.jl` prints the current
+buy-hold / sell-wait call with the two-filter breakdown; the per-strategy webpages
+(`results/blend_either_on.html`, `results/blend_avg.html`, built by
+`analysis/build_blend_pages.jl`) carry the full assessment and how-to-execute. Side-by-side
+study: `analysis/blend_finalists_compare.jl` + chart `results/blend_finalists.svg`.
+
 ## 5. Why QQQ specifically
 
 We ran the same 50/200 filter on all eight ETFs in the dataset. The drawdown protection
@@ -326,7 +352,10 @@ they're the price of catching real recoveries early.
 
 ```bash
 export PATH="$HOME/.juliaup/bin:$PATH"      # julia lives in ~/.juliaup/bin
-julia analysis/signal.jl                    # today's signal: SMA variants + CCI(50) band
+julia analysis/signal.jl                    # today's buy-hold/sell-wait call (the blend + breakdown)
+julia analysis/build_blend_pages.jl         # §4c per-strategy webpages (either-on / avg)
+julia analysis/blend_finalists_compare.jl   # §4c side-by-side battery (either-on vs avg)
+julia analysis/blend_walkforward.jl         # §4c blend OOS validation
 julia analysis/run_analysis.jl              # full strategy sweep + ranking + robustness
 julia analysis/walkforward.jl               # §3 walk-forward / OOS tests (SMA grid)
 julia analysis/cci_walkforward.jl           # §4b walk-forward / OOS tests (CCI band grid)

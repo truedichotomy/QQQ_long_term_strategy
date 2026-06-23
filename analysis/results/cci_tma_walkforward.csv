@@ -1,0 +1,5 @@
+method,oos_cagr,oos_total,oos_maxdd,oos_sharpe,oos_sortino,oos_calmar
+buy_and_hold,0.144616,20.253168,-0.535526,0.7411,1.0553,0.2700
+fixed_120_0_switch,0.113836,11.036264,-0.324840,0.8079,1.1313,0.3504
+wf_anchored_calmar,0.118634,12.145001,-0.324840,0.8464,1.1882,0.3652
+wf_anchored_cagr,0.111156,10.459722,-0.333148,0.7983,1.1143,0.3337

@@ -44,11 +44,45 @@ _parsefloat(s::AbstractString) = isempty(s) ? NaN : parse(Float64, replace(s, ",
 # Extract the content of every "..."-quoted field on a line.
 _fields(line::AbstractString) = [m.captures[1] for m in eachmatch(r"\"([^\"]*)\"", line)]
 
-"Locate the single CSV for `ticker` inside `dir` (filenames embed the date range)."
-function find_data_file(ticker::AbstractString; dir::AbstractString="data")
+"All CSVs for `ticker` inside `dir` (filenames embed the date range), sorted."
+function find_data_files(ticker::AbstractString; dir::AbstractString="data")
     files = filter(f -> startswith(f, ticker * " ") || startswith(f, ticker * "("), readdir(dir))
     isempty(files) && error("No data file for $ticker in $dir/")
-    return joinpath(dir, first(sort(files)))
+    return sort([joinpath(dir, f) for f in files])
+end
+
+"The single (or longest-history) CSV for `ticker`."
+find_data_file(ticker::AbstractString; dir::AbstractString="data") =
+    first(find_data_files(ticker; dir=dir))
+
+# The filename's leading number is the END timestamp of that pull; a larger value
+# means a more recent export, used to break ties on overlapping dates.
+_file_endts(path::AbstractString) = (m = match(r"\((\d+)", basename(path)); m === nothing ? "" : String(m.captures[1]))
+
+"""
+Merge several same-ticker `MarketData` into one continuous, date-sorted series.
+The time overlap between pulls is handled **by date and can be any size**: when a
+day appears in more than one file, the row from the most recent pull (larger
+end-timestamp) wins, so dropping in a newer overlapping file just extends/refreshes
+the series. Indicator columns come from whichever pull supplies each date.
+"""
+function merge_markets(parts::Vector{Tuple{MarketData,String}})
+    syms = collect(keys(parts[1][1].ind))
+    ord  = sort(parts; by = p -> p[2])           # ascending end-ts ⇒ newest pull last ⇒ it wins
+    px   = Dict{Date,NTuple{5,Float64}}()
+    ind  = Dict{Date,Dict{Symbol,Float64}}()
+    for (m, _) in ord, i in 1:length(m)
+        px[m.date[i]]  = (m.open[i], m.high[i], m.low[i], m.close[i], m.volume[i])
+        ind[m.date[i]] = Dict(s => m.ind[s][i] for s in syms)
+    end
+    dates = sort!(collect(keys(px))); n = length(dates)
+    o = Vector{Float64}(undef, n); h = similar(o); l = similar(o); c = similar(o); v = similar(o)
+    id = Dict(s => Vector{Float64}(undef, n) for s in syms)
+    for (i, dt) in enumerate(dates)
+        o[i], h[i], l[i], c[i], v[i] = px[dt]
+        for s in syms; id[s][i] = ind[dt][s]; end
+    end
+    return MarketData(parts[1][1].ticker, dates, o, h, l, c, v, id)
 end
 
 "Load and parse a `data/` CSV into a `MarketData`."
@@ -70,8 +104,12 @@ function load_market(path::AbstractString; ticker::AbstractString=first(split(ba
     return MarketData(String(ticker), date, o, h, l, c, v, ind)
 end
 
-load_ticker(ticker::AbstractString; dir::AbstractString="data") =
-    load_market(find_data_file(ticker; dir=dir); ticker=ticker)
+"Load every `dir` CSV for `ticker` and merge them into one continuous, deduped series."
+function load_ticker(ticker::AbstractString; dir::AbstractString="data")
+    files = find_data_files(ticker; dir=dir)
+    length(files) == 1 && return load_market(files[1]; ticker=ticker)
+    return merge_markets([(load_market(f; ticker=ticker), _file_endts(f)) for f in files])
+end
 
 "Index range [i0, i1] covering dates in [from, to] (clamped to available data)."
 function date_range(d::MarketData, from::Date, to::Date)

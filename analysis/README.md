@@ -13,7 +13,9 @@ behind it.
 ## Run
 
 ```bash
-julia analysis/signal.jl              # today's live 50/200 signal for QQQ
+julia analysis/signal.jl              # today's buy-hold/sell-wait call — the adopted blend + filter breakdown
+julia analysis/build_blend_pages.jl   # per-strategy execution webpages (blend either-on / avg) → results/blend_*.html
+julia analysis/blend_walkforward.jl   # OOS validation of the blends (STRATEGY.md §4c)
 julia analysis/run_analysis.jl        # backtest sweep + ranking + robustness  → results/*.csv
 julia analysis/walkforward.jl         # walk-forward / out-of-sample validation + hybrid check
 julia analysis/cci_walkforward.jl     # CCI(50)-band walk-forward / OOS validation (see STRATEGY.md §4b)
@@ -122,7 +124,7 @@ not a better dot-com hedge.
 
 - `STRATEGY.md` — **the deliverable**: chosen strategy, performance over time scales, execution guide
 - `QQQBacktest.jl` — module entry point (`include` + `using .QQQBacktest`)
-- `src/data.jl` — CSV loader for the `../data/` format
+- `src/data.jl` — CSV loader for the `../data/` format; `load_ticker` merges all of a ticker's files by date (variable overlap, newest pull wins)
 - `src/indicators.jl` — SMA/EMA/RSI/CCI/rolling stats, returns, drawdown
 - `src/engine.jl` — causal long/flat backtester
 - `src/metrics.jl` — CAGR, Sharpe, Sortino, max drawdown, Calmar, …
@@ -135,7 +137,9 @@ not a better dot-com hedge.
 - `cci_band_20yr.jl` / `cci_band_sweep.jl` / `cci_band_buy_sweep.jl` / `cci_band_test.jl` — CCI(50)-band sensitivity studies (STRATEGY.md §4b)
 - `cross_asset_analysis.jl` — do other ETFs improve QQQ timing? + 50/200 across all 8 ETFs
 - `report.jl` — per-year / per-decade / per-regime / rolling-CAGR breakdown
-- `signal.jl` — print the current 50/200 signal for a ticker (the day-to-day tool)
+- `signal.jl` — the day-to-day tool: current buy-hold/sell-wait call for the adopted blend, with the trend + momentum filter breakdown
+- `build_blend_pages.jl` — self-contained execution webpages for the two blends (`results/blend_either_on.html`, `results/blend_avg.html`)
+- `blend_finalists_compare.jl` / `blend_walkforward.jl` — blend side-by-side battery and OOS validation (STRATEGY.md §4c)
 - `plot_results.jl` / `plot_hybrid.jl` / `plot_recent.jl` — dependency-free SVG charts (PNG via `rsvg-convert`)
 - `build_report.jl` — assembles the self-contained **`results/QQQ_strategy.html`** (charts inlined)
 - `results/` — CSVs (`strategy_metrics`, `multiscale_flagship`, `cross_asset`, `annual_returns`,

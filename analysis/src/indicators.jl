@@ -18,6 +18,28 @@ function sma(x::AbstractVector, n::Integer)
     return out
 end
 
+"""
+Triangular moving average of period `n` — an SMA of an SMA, which gives roughly
+triangular weights (rising to the middle of the window, then falling) spanning
+`n` points. Implemented as two SMAs whose windows sum to `n+1` (`w1 = n÷2`,
+`w2 = n − w1 + 1`). Causal; NaN until `n` points are available. Smoother and more
+lagged than a plain SMA of the same length.
+"""
+function tma(x::AbstractVector, n::Integer)
+    n <= 1 && return sma(x, max(n, 1))
+    w1 = n ÷ 2
+    w2 = n - w1 + 1
+    inner = sma(x, w1)
+    m = length(x); out = fill(NaN, m)
+    f = findfirst(!isnan, inner)          # skip inner's NaN warm-up so it can't
+    f === nothing && return out           # poison the outer SMA's running sum
+    sub = sma(@view(inner[f:end]), w2)
+    @inbounds for (j, i) in enumerate(f:m)
+        out[i] = sub[j]
+    end
+    return out
+end
+
 "Exponential moving average (seeded at x[1])."
 function ema(x::AbstractVector, n::Integer)
     m = length(x); out = fill(NaN, m)
