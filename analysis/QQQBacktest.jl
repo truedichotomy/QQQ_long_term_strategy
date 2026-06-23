@@ -22,16 +22,18 @@ include("src/crossasset.jl")
 include("src/evaluate.jl")
 
 # data
-export MarketData, load_market, load_ticker, find_data_file, date_range
+export MarketData, load_market, load_ticker, find_data_file, find_data_files, merge_markets, date_range, subset
 # indicators
-export sma, ema, rsi, rolling_std, rolling_max, simple_returns, drawdown_series, max_drawdown
+export sma, ema, rsi, cci, tma, macd, awesome, adx, rolling_std, rolling_max, simple_returns, drawdown_series, max_drawdown
 # engine + metrics
 export BacktestResult, run_backtest, lag1, Metrics, compute_metrics, metric_row, METRIC_HEADER
 # strategies
 export buyhold, sma_filter, sma_cross, ema_filter, macd_cross, macd_hist,
-       di_trend, adx_trend, cci_trend, awesome_trend, rsi_trend,
+       di_trend, adx_trend, cci_trend, cci_band, cci_regime_switch, cci_band_tma_switch,
+       awesome_trend, rsi_trend,
        sma_slope, regime_stay, trailing_stop,
-       fast_reentry, regime_macd, dual_speed, sig_and, sig_or
+       fast_reentry, regime_macd, dual_speed, sig_and, sig_or,
+       blend_components, blend_either_on, blend_avg
 # cross-asset
 export align_close, sma_aligned, momentum, above_own_sma, cross_own,
        rel_strength, risk_on, gate_and, gate_or

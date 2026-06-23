@@ -13,9 +13,13 @@ behind it.
 ## Run
 
 ```bash
-julia analysis/signal.jl              # today's live 50/200 signal for QQQ
+julia analysis/signal.jl              # today's buy-hold/sell-wait call — the adopted blend + filter breakdown
+julia analysis/build_blend_pages.jl   # per-strategy execution webpages (blend either-on / avg) → results/blend_*.html
+julia analysis/blend_walkforward.jl   # OOS validation of the blends (STRATEGY.md §4c)
 julia analysis/run_analysis.jl        # backtest sweep + ranking + robustness  → results/*.csv
 julia analysis/walkforward.jl         # walk-forward / out-of-sample validation + hybrid check
+julia analysis/cci_walkforward.jl     # CCI(50)-band walk-forward / OOS validation (see STRATEGY.md §4b)
+julia analysis/cci_band_20yr.jl       # CCI(50)-band two-decade sensitivity (sell & buy threshold sweeps)
 julia analysis/cross_asset_analysis.jl# do other ETFs improve QQQ timing? + generality check
 julia analysis/report.jl              # per-year / per-decade / per-regime breakdown
 julia analysis/plot_results.jl        # equity + drawdown chart                → results/equity_curves.svg
@@ -42,8 +46,10 @@ SVGs into a square and chops off the right (recent) years.
 
 ## Method
 
-- **Data**: `../data/QQQ (…).csv`, 6,848 daily bars, 1999-03-10 → 2026-05-29. The window
-  deliberately spans the dot-com crash, 2008, 2020 and 2022, so drawdown is stress-tested.
+- **Data**: `../data/QQQ (…).csv`, ~6,860 daily bars, 1999-03-10 → 2026-06-23 (multiple
+  overlapping pulls merged by date). The window deliberately spans the dot-com crash, 2008,
+  2020 and 2022, so drawdown is stress-tested. **Only the first 6 columns (OHLCV) are used** —
+  all indicators are computed in `src/indicators.jl`, never read from the source file.
 - **Causality**: every signal is lagged one day (`pos[i] = signal[i-1]`) before it earns a
   return — no look-ahead. Indicators are NaN until their look-back fills, so each strategy
   is automatically flat during warm-up.
@@ -104,24 +110,40 @@ There is no free lunch: to beat B&H on *return* per-window you must stay ~fully 
 Genuinely beating B&H on return likely requires leverage (excluded here) or signals beyond
 daily price/indicator technicals.
 
+### An alternative overlay: the CCI(50) −120/−40 momentum band
+
+A separate, momentum-based risk-reducer (sell when CCI(50) < −120, re-enter when CCI(50) > −40)
+that's documented in full in **[STRATEGY.md §4b](STRATEGY.md)**. Over 2006–2026 — split into two
+independent decades — it cuts max drawdown to ~−22 % (vs B&H's −36 %/−54 %) and roughly doubles
+Calmar in both halves, at ~0.4–1.7 pp/yr less CAGR. Its walk-forward (`cci_walkforward.jl`)
+mirrors the SMA finding: the fixed band beats adaptive re-optimization out-of-sample (Calmar
+0.59 vs 0.46), evidence it isn't overfit. **Caveat:** unlike the SMA filter it handled the
+2000–2002 dot-com grind poorly (full-1999 sample drawdown −66 %, Calmar 0.17), so its clean
+~−22 % drawdown is a 2004-onward property — it's the smoother-ride option in the modern era,
+not a better dot-com hedge.
+
 ## Files
 
 - `STRATEGY.md` — **the deliverable**: chosen strategy, performance over time scales, execution guide
 - `QQQBacktest.jl` — module entry point (`include` + `using .QQQBacktest`)
-- `src/data.jl` — CSV loader for the `../data/` format
-- `src/indicators.jl` — SMA/EMA/RSI/rolling stats, returns, drawdown
+- `src/data.jl` — CSV loader for the `../data/` format; `load_ticker` merges all of a ticker's files by date (variable overlap, newest pull wins)
+- `src/indicators.jl` — all indicators computed from OHLCV: SMA/EMA/TMA/RSI/CCI/MACD/Awesome/ADX, rolling stats, returns, drawdown
 - `src/engine.jl` — causal long/flat backtester
 - `src/metrics.jl` — CAGR, Sharpe, Sortino, max drawdown, Calmar, …
-- `src/strategies.jl` — strategy library incl. shorter-horizon hybrids (`fast_reentry`, `regime_macd`, `dual_speed`) — add your own here
+- `src/strategies.jl` — strategy library incl. shorter-horizon hybrids (`fast_reentry`, `regime_macd`, `dual_speed`) and the CCI(50) momentum band (`cci_band`) — add your own here
 - `src/crossasset.jl` — align other ETFs to QQQ + cross-asset signal builders
 - `src/evaluate.jl` — rolling multi-timescale comparison + walk-forward engine (`walk_forward`)
 - `run_analysis.jl` — sweep, rank, pick flagship, write `results/`
 - `walkforward.jl` — out-of-sample parameter-selection tests, chronological splits, hybrid validation
+- `cci_walkforward.jl` — CCI(50)-band out-of-sample validation (band grid, stability, chronological splits)
+- `cci_band_20yr.jl` / `cci_band_sweep.jl` / `cci_band_buy_sweep.jl` / `cci_band_test.jl` — CCI(50)-band sensitivity studies (STRATEGY.md §4b)
 - `cross_asset_analysis.jl` — do other ETFs improve QQQ timing? + 50/200 across all 8 ETFs
 - `report.jl` — per-year / per-decade / per-regime / rolling-CAGR breakdown
-- `signal.jl` — print the current 50/200 signal for a ticker (the day-to-day tool)
+- `signal.jl` — the day-to-day tool: current buy-hold/sell-wait call for the adopted blend, with the trend + momentum filter breakdown
+- `build_blend_pages.jl` — self-contained execution webpages for the two blends (`results/blend_either_on.html`, `results/blend_avg.html`)
+- `blend_finalists_compare.jl` / `blend_walkforward.jl` — blend side-by-side battery and OOS validation (STRATEGY.md §4c)
 - `plot_results.jl` / `plot_hybrid.jl` / `plot_recent.jl` — dependency-free SVG charts (PNG via `rsvg-convert`)
 - `build_report.jl` — assembles the self-contained **`results/QQQ_strategy.html`** (charts inlined)
 - `results/` — CSVs (`strategy_metrics`, `multiscale_flagship`, `cross_asset`, `annual_returns`,
-  `period_returns`, `rolling_cagr`, `walkforward`, `walkforward_equity`) + charts
-  (`equity_curves`, `hybrid_vs_fixed`, `recent_10yr`) + `QQQ_strategy.html`
+  `period_returns`, `rolling_cagr`, `walkforward`, `walkforward_equity`, `cci_walkforward`,
+  `cci_walkforward_equity`) + charts (`equity_curves`, `hybrid_vs_fixed`, `recent_10yr`) + `QQQ_strategy.html`
