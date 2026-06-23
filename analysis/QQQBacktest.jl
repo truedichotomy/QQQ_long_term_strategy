@@ -24,12 +24,12 @@ include("src/evaluate.jl")
 # data
 export MarketData, load_market, load_ticker, find_data_file, date_range
 # indicators
-export sma, ema, rsi, rolling_std, rolling_max, simple_returns, drawdown_series, max_drawdown
+export sma, ema, rsi, cci, rolling_std, rolling_max, simple_returns, drawdown_series, max_drawdown
 # engine + metrics
 export BacktestResult, run_backtest, lag1, Metrics, compute_metrics, metric_row, METRIC_HEADER
 # strategies
 export buyhold, sma_filter, sma_cross, ema_filter, macd_cross, macd_hist,
-       di_trend, adx_trend, cci_trend, awesome_trend, rsi_trend,
+       di_trend, adx_trend, cci_trend, cci_band, awesome_trend, rsi_trend,
        sma_slope, regime_stay, trailing_stop,
        fast_reentry, regime_macd, dual_speed, sig_and, sig_or
 # cross-asset

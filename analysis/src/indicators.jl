@@ -31,6 +31,28 @@ function ema(x::AbstractVector, n::Integer)
     return out
 end
 
+"""
+Commodity Channel Index over `n` periods from the typical price
+TP = (high+low+close)/3:  CCI = (TP − SMA(TP,n)) / (0.015 · meanADdev), where the
+mean absolute deviation is taken over the same trailing `n`-day window. Causal;
+NaN until the window fills. (The source CSVs carry only CCI(40) as `:cci40`.)
+"""
+function cci(high::AbstractVector, low::AbstractVector, close::AbstractVector, n::Integer)
+    m = length(close); out = fill(NaN, m)
+    n <= 0 && return out
+    tp = (high .+ low .+ close) ./ 3
+    s = sma(tp, n)
+    for i in n:m
+        md = 0.0
+        for j in (i - n + 1):i
+            md += abs(tp[j] - s[i])
+        end
+        md /= n
+        out[i] = md == 0 ? 0.0 : (tp[i] - s[i]) / (0.015 * md)
+    end
+    return out
+end
+
 "Wilder's RSI over `n` periods (0–100)."
 function rsi(close::AbstractVector, n::Integer=14)
     m = length(close); out = fill(NaN, m)

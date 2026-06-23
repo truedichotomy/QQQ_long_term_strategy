@@ -43,6 +43,27 @@ adx_trend(d::MarketData; thr::Real=20) =
 cci_trend(d::MarketData; lo::Real=0) =
     Float64.(d.ind[:cci40] .> lo)
 
+"""
+CCI hysteresis-band crash filter (stateful): start invested; exit to cash when
+CCI(`n`) falls below `exit_lo` (a deep washout), then stay flat until CCI climbs
+back above `entry_hi`. The wide band (`exit_lo` ≪ `entry_hi`) keeps it from
+re-entering into continued weakness. Default −120 / 0 on CCI(50). CCI(50) is
+computed here (the source file only carries CCI(40)).
+"""
+function cci_band(d::MarketData; n::Integer=50, exit_lo::Real=-120, entry_hi::Real=0)
+    c = cci(d.high, d.low, d.close, n)
+    m = length(d.close); out = zeros(m); invested = true
+    for i in 1:m
+        if invested
+            (!isnan(c[i]) && c[i] < exit_lo) && (invested = false)
+        else
+            (!isnan(c[i]) && c[i] > entry_hi) && (invested = true)
+        end
+        out[i] = invested ? 1.0 : 0.0
+    end
+    return out
+end
+
 "Long while the Awesome-oscillator histogram is positive."
 awesome_trend(d::MarketData) =
     Float64.(d.ind[:awesome] .> 0)

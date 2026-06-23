@@ -192,6 +192,78 @@ slightly **beat** buy-and-hold on return with a shallower drawdown.
 
 ---
 
+## 4b. An alternative overlay — the CCI(50) −120/−40 momentum band
+
+A separate, **momentum-based** overlay that reduces drawdown without the moving-average
+machinery. It uses the 50-day Commodity Channel Index (CCI), a normalized measure of how
+far price sits from its recent mean:
+
+```
+CCI(50) band (hysteresis):
+  • Start invested. Sell to cash when CCI(50) falls below −120 (a deep washout).
+  • Stay in cash until CCI(50) climbs back above −40, then re-enter.
+  • The wide −120 / −40 band keeps it from re-entering into continued weakness.
+```
+
+It's a pure **risk-reducer**, not a return-booster, and it earns its keep the same way the
+SMA filter does — by side-stepping deep, grinding selloffs while earning cash yield out.
+Tested over 20 years split into two independent decades:
+
+| (QQQ, cash 4 %/yr, 5 bps/trade) | Prior decade ’06–’16 | Recent decade ’16–’26 | Full 20 yr |
+|---|---:|---:|---:|
+| CCI band CAGR / B&H CAGR | 10.7 % / 11.0 % | 19.2 % / 20.9 % | 14.9 % / 15.9 % |
+| **CCI band maxDD / B&H maxDD** | **−21 % / −54 %** | **−23 % / −36 %** | **−23 % / −54 %** |
+| CCI band Calmar / B&H Calmar | **0.50 / 0.21** | **0.85 / 0.59** | **0.65 / 0.30** |
+| Trades/yr | ~5 | ~5 | ~5 |
+
+The trade-off is identical in both halves: give up ~0.4–1.7 pp/yr of CAGR for **roughly half
+the drawdown and ~double the Calmar**. The drawdown control is strikingly stable — ~−22 % in
+every window regardless of regime.
+
+**Parameter robustness.** The two thresholds were swept independently. The **−40 re-entry was
+the CAGR peak even in the independent prior decade** (not just in the recent one it was first
+found on) — eager re-entry (buy < −60) whipsaws *and* deepens drawdown to ~−42 %; over-patient
+re-entry (buy > +40) bleeds return. The **−120 exit sits in a flat plateau** (−110 to −140 all
+behave similarly); the exit level is a low-leverage knob, the re-entry level is the one that
+matters. See `analysis/cci_band_sweep.jl` (sell), `cci_band_buy_sweep.jl` (buy), and
+`cci_band_20yr.jl` (two-decade sensitivity).
+
+**Walk-forward (out-of-sample).** Re-selecting the band every year from a 25-band grid using
+*only past data* (first OOS year 2004, so the dot-com crash is in training) does **worse** than
+the fixed −120/−40: over OOS 2004–2026 the fixed rule returns **13.5 %/yr at −23 % drawdown
+(Calmar 0.59)** while the adaptive walk-forward manages 12.2 % at −27 % (Calmar 0.46), and B&H
+14.6 % at −54 %. The walk-forward consistently lands on −110/0 — one grid-step from −120/−40 —
+and in chronological train/test splits the fixed −120/−40 generalizes forward *better* than the
+in-sample-optimal band. As with the SMA filter, the fact that clever re-optimization can't beat
+the round fixed choice is evidence the choice isn't overfit. (`analysis/cci_walkforward.jl`.)
+
+**The one blemish — the dot-com crash.** Over the *full* 1999–2026 sample its worst drawdown is
+**−66 %, not −22 %**. In the 2000–2002 grind, CCI's mean-reversion re-entries kept buying relief
+rallies before the next leg down, so it never fully stepped aside (full-sample Calmar 0.17, vs
+the SMA filter's 0.33). The clean ~−22 % drawdown is a **2004-onward property** — over its OOS
+life it's excellent, but it has not been stress-tested kindly by a prolonged saw-toothed bear.
+If dodging *that* kind of market is the priority, the SMA Conservative variant is the safer tool.
+
+**Where it stands today** (run `julia analysis/signal.jl`):
+
+```
+QQQ as of 2026-05-29:  close 738.31   CCI-50 123.70
+CCI(50) band -120/-40:  ▲ LONG  (re-entered 2026-04-08, after the early-2026 dip)
+```
+
+**SMA filter vs CCI band — which to use.** They're complementary, not competing:
+
+- The **SMA trend filter** (Standard/Conservative) reacts to the *long* trend; it's slower,
+  trades less, and over the full 1999–2026 sample out-returns B&H.
+- The **CCI band** reacts to *momentum extremes*; it cuts drawdown a touch harder and more
+  consistently across regimes, at slightly lower raw return. It does not out-return B&H over
+  rolling 20-yr windows — it's the smoother-ride option.
+
+Honest caveat: annualized it preserves ~93–96 % of B&H CAGR, but **compounded** that is ~76 %
+of terminal wealth over 10 yr and ~84 % over 20 yr — the cash drag and slightly-late re-entries
+cost real money over long holds. Choose it when a livable −22 % worst case (vs −54 %) matters
+more than the last point of return.
+
 ## 5. Why QQQ specifically
 
 We ran the same 50/200 filter on all eight ETFs in the dataset. The drawdown protection
@@ -254,9 +326,11 @@ they're the price of catching real recoveries early.
 
 ```bash
 export PATH="$HOME/.juliaup/bin:$PATH"      # julia lives in ~/.juliaup/bin
-julia analysis/signal.jl                    # today's signal, both variants
+julia analysis/signal.jl                    # today's signal: SMA variants + CCI(50) band
 julia analysis/run_analysis.jl              # full strategy sweep + ranking + robustness
-julia analysis/walkforward.jl               # §3 walk-forward / OOS tests
+julia analysis/walkforward.jl               # §3 walk-forward / OOS tests (SMA grid)
+julia analysis/cci_walkforward.jl           # §4b walk-forward / OOS tests (CCI band grid)
+julia analysis/cci_band_20yr.jl             # §4b two-decade sensitivity (sell & buy sweeps)
 julia analysis/report.jl                    # per-year / per-decade / per-regime tables
 julia analysis/cross_asset_analysis.jl      # §5 cross-asset study
 julia analysis/plot_hybrid.jl               # the §2 three-way chart

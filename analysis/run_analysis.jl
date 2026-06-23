@@ -45,6 +45,7 @@ for thr in (15, 20, 25)
     push!(candidates, ("ADX trend thr=$thr", adx_trend(d; thr=thr)))
 end
 push!(candidates, ("CCI(40)>0", cci_trend(d; lo=0)))
+push!(candidates, ("CCI(50) band -120/-40", cci_band(d; n=50, exit_lo=-120, entry_hi=-40)))
 push!(candidates, ("Awesome>0", awesome_trend(d)))
 push!(candidates, ("RSI(14)>50", rsi_trend(d; n=14, lo=50)))
 
