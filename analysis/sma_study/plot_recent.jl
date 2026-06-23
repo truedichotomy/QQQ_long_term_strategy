@@ -9,7 +9,7 @@ include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Dates, Printf
 
-const OUTDIR = joinpath(dirname(@__DIR__), "results")
+const OUTDIR = joinpath(dirname(@__DIR__), "results", "sma_study")
 const SVG = joinpath(OUTDIR, "recent_10yr.svg")
 d = load_ticker("QQQ"; dir=joinpath(dirname(dirname(@__DIR__)), "data"))
 bt(s) = run_backtest(d, s; cost=5e-4, rf_annual=0.04).eq

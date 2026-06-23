@@ -7,7 +7,7 @@ include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Dates
 
-const OUTDIR = joinpath(dirname(@__DIR__), "results")
+const OUTDIR = joinpath(dirname(@__DIR__), "results", "sma_study")
 const TK = isempty(ARGS) ? "QQQ" : uppercase(ARGS[1])
 const SVG = joinpath(OUTDIR, TK == "QQQ" ? "hybrid_vs_fixed.svg" : "hybrid_$(TK).svg")
 d = load_ticker(TK; dir=joinpath(dirname(dirname(@__DIR__)), "data"))

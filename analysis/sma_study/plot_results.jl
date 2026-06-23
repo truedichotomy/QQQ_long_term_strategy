@@ -6,9 +6,9 @@
 #   julia analysis/plot_results.jl     # produces results/equity_curves.svg
 
 const HERE = dirname(@__DIR__)
-const CSV  = joinpath(HERE, "results", "equity_curves.csv")
-const SVG  = joinpath(HERE, "results", "equity_curves.svg")
-const SUMMARY = joinpath(HERE, "results", "flagship_summary.csv")
+const CSV  = joinpath(HERE, "results", "sma_study", "equity_curves.csv")
+const SVG  = joinpath(HERE, "results", "sma_study", "equity_curves.svg")
+const SUMMARY = joinpath(HERE, "results", "sma_study", "flagship_summary.csv")
 
 # headline numbers come from run_analysis.jl so the chart never goes stale
 summ = Dict{String,Tuple{String,String}}()

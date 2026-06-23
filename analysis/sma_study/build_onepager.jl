@@ -10,7 +10,7 @@ include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
-const RES = joinpath(dirname(@__DIR__), "results"); const OUT = joinpath(RES, "QQQ_strategy_1page.html")
+const RES = joinpath(dirname(@__DIR__), "results", "sma_study"); const OUT = joinpath(RES, "QQQ_strategy_1page.html")
 const COST, RF = 5e-4, 0.04
 d = load_ticker("QQQ"; dir=joinpath(dirname(dirname(@__DIR__)), "data")); N = length(d)
 bt(s) = run_backtest(d, s; cost=COST, rf_annual=RF)

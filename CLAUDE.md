@@ -12,7 +12,7 @@ A personal quantitative investment analysis project written in Julia (`.jl` scri
 export PATH="$HOME/.juliaup/bin:$PATH"
 julia --startup-file=no analysis/signal.jl              # ⭐ today's trade signal (adopted either-on blend) — the day-to-day tool
 julia --startup-file=no analysis/sma_study/run_analysis.jl  # the QQQ technical-strategy study (see analysis/README.md)
-julia --startup-file=no analysis/sma_study/plot_results.jl  # render results/equity_curves.svg
+julia --startup-file=no analysis/sma_study/plot_results.jl  # render results/sma_study/equity_curves.svg
 julia old/QQQ_analysis.jl                               # legacy script (needs CSV/DataFrames/Plots installed)
 ```
 

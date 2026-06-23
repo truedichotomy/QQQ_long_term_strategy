@@ -10,7 +10,7 @@ using Printf, Statistics, Dates
 
 const COST, RF = 5e-4, 0.04
 const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
-const OUTDIR  = joinpath(dirname(@__DIR__), "results")
+const OUTDIR  = joinpath(dirname(@__DIR__), "results", "sma_study")
 mkpath(OUTDIR)
 
 d  = load_ticker("QQQ"; dir=DATADIR)

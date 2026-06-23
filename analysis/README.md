@@ -96,7 +96,7 @@ drawdown — so it became the Standard variant.
 | OOS 2004+ CAGR / maxDD | 14.1 % / −29 % | 12.4 % / −29 % | 14.7 % / −54 % |
 | Trades/yr | ~5 | ~1.3 | 0 |
 
-![equity & drawdown](results/hybrid_vs_fixed.svg)
+![equity & drawdown](results/sma_study/hybrid_vs_fixed.svg)
 
 ## The honest read
 
@@ -166,4 +166,7 @@ not a better dot-com hedge.
 - CCI band & TMA-switch sweeps + walk-forwards (`cci_band_*.jl`, `cci_tma_*.jl`, `cci_walkforward.jl`, `cci_regime_switch_test.jl`),
   the lost-decade study (`period_1999_2009.jl`), and the earlier finalists comparison (`finalists_compare.jl`, `finalists_blend_test.jl`, `plot_finalists.jl`)
 
-**`results/`** — CSVs + charts + HTML pages (written by the scripts above; `signal.jl` writes nothing)
+**`results/`** — outputs, mirroring the script layout: root holds the blend artifacts
+(`blend_either_on.html`, `blend_avg.html`, `blend_finalists.svg/png`, `blend_walkforward.csv`);
+`results/sma_study/` holds the SMA-study CSVs/charts/HTML; `results/tests/` holds the
+exploratory outputs. (`signal.jl` writes nothing — it just prints.)

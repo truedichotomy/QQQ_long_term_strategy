@@ -9,7 +9,7 @@ include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
-const RES = joinpath(dirname(@__DIR__), "results"); const SVG = joinpath(RES, "risk_return.svg")
+const RES = joinpath(dirname(@__DIR__), "results", "sma_study"); const SVG = joinpath(RES, "risk_return.svg")
 const RF = 0.04
 bt(d, s) = run_backtest(d, s; cost=5e-4, rf_annual=RF)
 function wm(eq, dts, a, b)

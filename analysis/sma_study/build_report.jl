@@ -11,7 +11,7 @@ include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
-const RES = joinpath(dirname(@__DIR__), "results")
+const RES = joinpath(dirname(@__DIR__), "results", "sma_study")
 const OUT = joinpath(RES, "QQQ_strategy.html")
 const COST, RF = 5e-4, 0.04
 

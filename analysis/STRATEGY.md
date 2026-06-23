@@ -65,7 +65,7 @@ The most important fact about both variants: **their return edge is concentrated
 bear markets, and they lag in sustained bulls.** They are best understood as downside
 insurance that, on QQQ, has historically paid for itself.
 
-![Standard vs Conservative vs buy & hold](results/hybrid_vs_fixed.svg)
+![Standard vs Conservative vs buy & hold](results/sma_study/hybrid_vs_fixed.svg)
 
 ### 2a. By decade — annualized return / max drawdown
 
@@ -178,11 +178,11 @@ Prefer it if you value the fewest possible trades, the cleanest rule, and the ti
 drawdown control in a crash, and you're willing to leave some return on the table. The
 full-history equity/drawdown of the conservative rule vs buy-and-hold:
 
-![Conservative 50/200 vs buy & hold](results/equity_curves.svg)
+![Conservative 50/200 vs buy & hold](results/sma_study/equity_curves.svg)
 
 ### Last 10 years — relative performance
 
-![last 10 years relative performance](results/recent_10yr.svg)
+![last 10 years relative performance](results/sma_study/recent_10yr.svg)
 
 The bottom panel shows each variant *relative to buy & hold* (above 100 % = cumulatively
 ahead). Both drift below in calm bull runs, then jump above during every selloff

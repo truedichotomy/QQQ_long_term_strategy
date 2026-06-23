@@ -14,7 +14,7 @@ using Printf, Statistics, Dates
 
 const COST, RF = 5e-4, 0.04
 const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
-const OUTDIR  = joinpath(dirname(@__DIR__), "results")
+const OUTDIR  = joinpath(dirname(@__DIR__), "results", "sma_study")
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)
 
 d   = load_ticker("QQQ"; dir=DATADIR)
