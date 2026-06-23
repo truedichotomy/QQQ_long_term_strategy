@@ -46,8 +46,10 @@ SVGs into a square and chops off the right (recent) years.
 
 ## Method
 
-- **Data**: `../data/QQQ (…).csv`, 6,848 daily bars, 1999-03-10 → 2026-05-29. The window
-  deliberately spans the dot-com crash, 2008, 2020 and 2022, so drawdown is stress-tested.
+- **Data**: `../data/QQQ (…).csv`, ~6,860 daily bars, 1999-03-10 → 2026-06-23 (multiple
+  overlapping pulls merged by date). The window deliberately spans the dot-com crash, 2008,
+  2020 and 2022, so drawdown is stress-tested. **Only the first 6 columns (OHLCV) are used** —
+  all indicators are computed in `src/indicators.jl`, never read from the source file.
 - **Causality**: every signal is lagged one day (`pos[i] = signal[i-1]`) before it earns a
   return — no look-ahead. Indicators are NaN until their look-back fills, so each strategy
   is automatically flat during warm-up.
@@ -125,7 +127,7 @@ not a better dot-com hedge.
 - `STRATEGY.md` — **the deliverable**: chosen strategy, performance over time scales, execution guide
 - `QQQBacktest.jl` — module entry point (`include` + `using .QQQBacktest`)
 - `src/data.jl` — CSV loader for the `../data/` format; `load_ticker` merges all of a ticker's files by date (variable overlap, newest pull wins)
-- `src/indicators.jl` — SMA/EMA/RSI/CCI/rolling stats, returns, drawdown
+- `src/indicators.jl` — all indicators computed from OHLCV: SMA/EMA/TMA/RSI/CCI/MACD/Awesome/ADX, rolling stats, returns, drawdown
 - `src/engine.jl` — causal long/flat backtester
 - `src/metrics.jl` — CAGR, Sharpe, Sortino, max drawdown, Calmar, …
 - `src/strategies.jl` — strategy library incl. shorter-horizon hybrids (`fast_reentry`, `regime_macd`, `dual_speed`) and the CCI(50) momentum band (`cci_band`) — add your own here

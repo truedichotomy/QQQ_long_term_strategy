@@ -15,9 +15,8 @@ const COST, RF = 5e-4, 0.04
 d = load_ticker("QQQ"; dir=joinpath(dirname(@__DIR__), "data")); N = length(d)
 bt(s) = run_backtest(d, s; cost=COST, rf_annual=RF)
 function slice_md(d::MarketData, i0, i1)
-    ind = Dict(k => v[i0:i1] for (k, v) in d.ind)
     MarketData(d.ticker, d.date[i0:i1], d.open[i0:i1], d.high[i0:i1],
-               d.low[i0:i1], d.close[i0:i1], d.volume[i0:i1], ind)
+               d.low[i0:i1], d.close[i0:i1], d.volume[i0:i1])
 end
 ev(sig, a, b) = compute_metrics(run_backtest(slice_md(d, a, b), sig[a:b]; cost=COST, rf_annual=RF))
 win(f, t) = date_range(d, f, t)
@@ -30,7 +29,7 @@ FR  = fast_reentry(d; fast=50, slow=200, re=50, hold=10)
 AVG = (CCI .+ FR) ./ 2
 EIT = sig_or(CCI, FR)
 BH  = buyhold(d)
-s50 = sma(d.close, 50); s200 = sma(d.close, 200); c40 = d.ind[:cci40]; t200 = tma(d.close, 200)
+s50 = sma(d.close, 50); s200 = sma(d.close, 200); c40 = cci(d.high, d.low, d.close, 40); t200 = tma(d.close, 200)
 
 # ── chart: strategy (color) vs buy & hold (gray), equity(log) + drawdown ───────
 function chart_svg(name, color, eq)

@@ -20,20 +20,12 @@ bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)
 
 # Slice a MarketData to [i0, i1] (keeps precomputed indicators aligned).
 function slice_md(d::MarketData, i0::Integer, i1::Integer)
-    ind = Dict(k => v[i0:i1] for (k, v) in d.ind)
     MarketData(d.ticker, d.date[i0:i1], d.open[i0:i1], d.high[i0:i1],
-               d.low[i0:i1], d.close[i0:i1], d.volume[i0:i1], ind)
+               d.low[i0:i1], d.close[i0:i1], d.volume[i0:i1])
 end
 
 d = load_ticker("QQQ"; dir=DATADIR)
 @printf("Loaded QQQ: %d days, %s … %s\n", length(d), d.date[1], d.date[end])
-
-# --- sanity check: our CCI(40) vs the CCI(40) baked into the source CSV --------
-mine40 = cci(d.high, d.low, d.close, 40)
-both = [i for i in eachindex(mine40) if !isnan(mine40[i]) && !isnan(d.ind[:cci40][i])]
-diffs = abs.(mine40[both] .- d.ind[:cci40][both])
-@printf("CCI(40) self-check vs source column: n=%d  median|Δ|=%.3f  max|Δ|=%.3f\n\n",
-        length(both), median(diffs), maximum(diffs))
 
 # --- build the signal on FULL history (so CCI(50) is warm well before 2016) ----
 # The position state carried into the 10-yr window reflects real prior history.

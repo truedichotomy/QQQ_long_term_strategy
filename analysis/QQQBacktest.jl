@@ -22,9 +22,9 @@ include("src/crossasset.jl")
 include("src/evaluate.jl")
 
 # data
-export MarketData, load_market, load_ticker, find_data_file, find_data_files, merge_markets, date_range
+export MarketData, load_market, load_ticker, find_data_file, find_data_files, merge_markets, date_range, subset
 # indicators
-export sma, ema, rsi, cci, tma, rolling_std, rolling_max, simple_returns, drawdown_series, max_drawdown
+export sma, ema, rsi, cci, tma, macd, awesome, adx, rolling_std, rolling_max, simple_returns, drawdown_series, max_drawdown
 # engine + metrics
 export BacktestResult, run_backtest, lag1, Metrics, compute_metrics, metric_row, METRIC_HEADER
 # strategies

@@ -17,7 +17,7 @@ function show_signal(ticker)
     d = load_ticker(ticker; dir=joinpath(dirname(@__DIR__), "data"))
     n = length(d)
     s50 = sma(d.close, 50); s200 = sma(d.close, 200)
-    c40 = d.ind[:cci40]; t200 = tma(d.close, 200)
+    c40 = cci(d.high, d.low, d.close, 40); t200 = tma(d.close, 200)
     mom, trend = blend_components(d)            # (CCI40 TMA-trigger, SMA fast-reentry)
     either = blend_either_on(d); avg = blend_avg(d)
     instate(x) = x == 1 ? "IN " : "OUT"

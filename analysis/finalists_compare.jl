@@ -18,9 +18,8 @@ const COST, RF = 5e-4, 0.04
 const DATADIR = joinpath(dirname(@__DIR__), "data")
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)
 function slice_md(d::MarketData, i0, i1)
-    ind = Dict(k => v[i0:i1] for (k, v) in d.ind)
     MarketData(d.ticker, d.date[i0:i1], d.open[i0:i1], d.high[i0:i1],
-               d.low[i0:i1], d.close[i0:i1], d.volume[i0:i1], ind)
+               d.low[i0:i1], d.close[i0:i1], d.volume[i0:i1])
 end
 
 d = load_ticker("QQQ"; dir=DATADIR)
