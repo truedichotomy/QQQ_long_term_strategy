@@ -6,13 +6,13 @@
 #
 #   julia analysis/build_onepager.jl     # -> results/QQQ_strategy_1page.html
 
-include(joinpath(@__DIR__, "QQQBacktest.jl"))
+include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
-const RES = joinpath(@__DIR__, "results"); const OUT = joinpath(RES, "QQQ_strategy_1page.html")
+const RES = joinpath(dirname(@__DIR__), "results"); const OUT = joinpath(RES, "QQQ_strategy_1page.html")
 const COST, RF = 5e-4, 0.04
-d = load_ticker("QQQ"; dir=joinpath(dirname(@__DIR__), "data")); N = length(d)
+d = load_ticker("QQQ"; dir=joinpath(dirname(dirname(@__DIR__)), "data")); N = length(d)
 bt(s) = run_backtest(d, s; cost=COST, rf_annual=RF)
 bh = bt(buyhold(d)); st = bt(fast_reentry(d)); cn = bt(sma_cross(d; fast=50, slow=200))
 Mbh, Mst, Mcn = compute_metrics(bh), compute_metrics(st), compute_metrics(cn)

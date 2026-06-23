@@ -5,12 +5,12 @@
 #
 #   julia --startup-file=no analysis/cci_tma_robustness.jl
 
-include(joinpath(@__DIR__, "QQQBacktest.jl"))
+include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
 const COST, RF = 5e-4, 0.04
-const DATADIR = joinpath(dirname(@__DIR__), "data")
+const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)
 function slice_md(d::MarketData, i0::Integer, i1::Integer)
     MarketData(d.ticker, d.date[i0:i1], d.open[i0:i1], d.high[i0:i1],

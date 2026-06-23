@@ -5,11 +5,11 @@
 #
 #   julia analysis/plot_universe.jl     # -> results/risk_return.svg (+ .png)
 
-include(joinpath(@__DIR__, "QQQBacktest.jl"))
+include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
-const RES = joinpath(@__DIR__, "results"); const SVG = joinpath(RES, "risk_return.svg")
+const RES = joinpath(dirname(@__DIR__), "results"); const SVG = joinpath(RES, "risk_return.svg")
 const RF = 0.04
 bt(d, s) = run_backtest(d, s; cost=5e-4, rf_annual=RF)
 function wm(eq, dts, a, b)
@@ -22,7 +22,7 @@ end
 tickers = ("QQQ","VGT","SOXX","SPY","DIA","IWM","XLE","TLT","GLD","TIP")
 pts = []
 for t in tickers
-    d = load_ticker(t; dir=joinpath(dirname(@__DIR__), "data"))
+    d = load_ticker(t; dir=joinpath(dirname(dirname(@__DIR__)), "data"))
     a, b = date_range(d, Date(2005,1,3), d.date[end])
     best = nothing
     for (nm, sig) in (("Std", fast_reentry(d)), ("Con", sma_cross(d; fast=50, slow=200)))

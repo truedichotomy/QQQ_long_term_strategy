@@ -9,14 +9,14 @@
 #   * cash earns ~4%/yr
 #   * 5 bps proportional cost charged on turnover (whipsaw penalty)
 
-include(joinpath(@__DIR__, "QQQBacktest.jl"))
+include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
 const COST = 5e-4
 const RF   = 0.04
-const DATADIR = joinpath(dirname(@__DIR__), "data")
-const OUTDIR  = joinpath(@__DIR__, "results")
+const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
+const OUTDIR  = joinpath(dirname(@__DIR__), "results")
 
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)
 

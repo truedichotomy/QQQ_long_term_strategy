@@ -5,13 +5,13 @@
 #
 #   julia analysis/plot_recent.jl     # -> results/recent_10yr.svg (+ .png if rsvg-convert present)
 
-include(joinpath(@__DIR__, "QQQBacktest.jl"))
+include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Dates, Printf
 
-const OUTDIR = joinpath(@__DIR__, "results")
+const OUTDIR = joinpath(dirname(@__DIR__), "results")
 const SVG = joinpath(OUTDIR, "recent_10yr.svg")
-d = load_ticker("QQQ"; dir=joinpath(dirname(@__DIR__), "data"))
+d = load_ticker("QQQ"; dir=joinpath(dirname(dirname(@__DIR__)), "data"))
 bt(s) = run_backtest(d, s; cost=5e-4, rf_annual=0.04).eq
 
 # full-history backtests (correct warm-up / regime state), then slice last 10 years

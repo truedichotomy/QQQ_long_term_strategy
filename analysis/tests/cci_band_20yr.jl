@@ -9,13 +9,13 @@
 #
 #   julia --startup-file=no analysis/cci_band_20yr.jl
 
-include(joinpath(@__DIR__, "QQQBacktest.jl"))
+include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
 const COST = 5e-4
 const RF   = 0.04
-const DATADIR = joinpath(dirname(@__DIR__), "data")
+const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
 const SELL = -120     # fixed exit for the buy sweep
 const BUY  = -40      # fixed re-entry for the sell sweep
 

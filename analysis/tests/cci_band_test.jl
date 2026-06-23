@@ -8,13 +8,13 @@
 #
 # Scoped to the last 10 years of data, with full-history shown for context.
 
-include(joinpath(@__DIR__, "QQQBacktest.jl"))
+include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
 const COST = 5e-4
 const RF   = 0.04
-const DATADIR = joinpath(dirname(@__DIR__), "data")
+const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
 
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)
 

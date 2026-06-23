@@ -10,38 +10,55 @@ Pure base Julia + stdlib — no packages to install.
 as an investor, see [STRATEGY.md](STRATEGY.md).** This file documents the *study*
 behind it.
 
-## Run
+## ⭐ Get today's trade signal
 
 ```bash
-julia analysis/signal.jl              # today's buy-hold/sell-wait call — the adopted blend + filter breakdown
-julia analysis/build_blend_pages.jl   # per-strategy execution webpages (blend either-on / avg) → results/blend_*.html
-julia analysis/blend_walkforward.jl   # OOS validation of the blends (STRATEGY.md §4c)
-julia analysis/run_analysis.jl        # backtest sweep + ranking + robustness  → results/*.csv
-julia analysis/walkforward.jl         # walk-forward / out-of-sample validation + hybrid check
-julia analysis/cci_walkforward.jl     # CCI(50)-band walk-forward / OOS validation (see STRATEGY.md §4b)
-julia analysis/cci_band_20yr.jl       # CCI(50)-band two-decade sensitivity (sell & buy threshold sweeps)
-julia analysis/cross_asset_analysis.jl# do other ETFs improve QQQ timing? + generality check
-julia analysis/report.jl              # per-year / per-decade / per-regime breakdown
-julia analysis/plot_results.jl        # equity + drawdown chart                → results/equity_curves.svg
-julia analysis/plot_hybrid.jl         # B&H vs fixed 50/200 vs fast-reentry     → results/hybrid_vs_fixed.svg
-julia analysis/plot_recent.jl         # last-10-year relative performance       → results/recent_10yr.svg
-julia analysis/plot_hybrid.jl SOXX    # per-ticker chart (any ticker in data/)  → results/hybrid_SOXX.svg
-julia analysis/plot_universe.jl       # cross-asset risk/return scatter (2005+)  → results/risk_return.svg
-julia analysis/build_report.jl        # self-contained HTML report (charts inlined) → results/QQQ_strategy.html
-julia analysis/build_onepager.jl      # one-page print summary → results/QQQ_strategy_1page.html (→ PDF via Chrome)
+julia analysis/signal.jl          # ← run THIS for the latest call
 ```
 
-One-page PDF: `julia analysis/build_onepager.jl` then
-`'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --headless=new --no-pdf-header-footer --print-to-pdf=analysis/results/QQQ_strategy_1page.pdf file://$PWD/analysis/results/QQQ_strategy_1page.html`
+This is the one command you run day-to-day. It loads the **latest** QQQ data from
+`../data/` (automatically merging any newer overlapping pulls you've dropped in — see
+"Updating the data" below), then prints the current **buy-hold / sell-wait** call for the
+adopted **either-on blend**, with the trend- and momentum-filter breakdown:
 
-`build_report.jl` inlines the charts from `plot_hybrid`/`plot_recent`/`plot_results`/`plot_universe`,
-so run those first. `signal.jl` and `plot_hybrid.jl` take an optional ticker argument
-(default QQQ) — e.g. `julia analysis/signal.jl VGT`.
+```
+► EITHER-ON  ▲ BUY / HOLD  —  100% QQQ      (or  ▼ SELL / WAIT — hold cash)
+► AVG (½-size alt.)  exposure now = 100% QQQ
+```
 
-Charts are written as **SVG** (zero-dependency). The plot scripts also emit a PNG if
-`rsvg-convert` is on `PATH`. Do **not** rasterize with macOS `qlmanage` — it crops wide
-SVGs into a square and chops off the right (recent) years.
+Optional ticker argument (default QQQ): `julia analysis/signal.jl QQQ`.
 
+### Updating the data
+Drop a fresh `QQQ (ENDts _ STARTts).csv` export into `data/` and re-run `signal.jl` — no
+other step. `load_ticker` merges every QQQ file by date (overlap of any size, newest pull
+wins). Only the first 6 columns (Date, OHLC, Volume) are read; any trailing indicator
+columns are ignored and all indicators are recomputed from price.
+
+## Repo layout & other scripts
+
+**`analysis/` (root) — the two production blend cases:**
+
+```bash
+julia analysis/signal.jl                # today's signal (above)
+julia analysis/build_blend_pages.jl     # execution webpages   → results/blend_either_on.html, blend_avg.html
+julia analysis/blend_finalists_compare.jl  # side-by-side either-on vs avg battery (decision table)
+julia analysis/blend_walkforward.jl     # out-of-sample validation of the blends
+julia analysis/plot_blend_finalists.jl  # equity + drawdown chart → results/blend_finalists.svg
+```
+
+**`analysis/sma_study/` — the original SMA-flagship study** (CAGR-beat-with-no-worse-drawdown sweep):
+`run_analysis.jl` (sweep/rank/flagship), `walkforward.jl`, `cross_asset_analysis.jl`,
+`report.jl`, `plot_results.jl` / `plot_hybrid.jl` / `plot_recent.jl` / `plot_universe.jl`,
+`build_report.jl`, `build_onepager.jl`. Run e.g. `julia analysis/sma_study/run_analysis.jl`.
+
+**`analysis/tests/` — exploratory / development scripts** behind the blend (kept for the record):
+the CCI band & TMA-switch sweeps and walk-forwards (`cci_*.jl`), the lost-decade study
+(`period_1999_2009.jl`), and the earlier two-strategy finalist comparison (`finalists_*.jl`,
+`plot_finalists.jl`).
+
+Charts are **SVG** (zero-dependency); plot scripts also emit PNG if `rsvg-convert` is on `PATH`.
+Do **not** rasterize wide SVGs with macOS `qlmanage` (it square-crops and chops recent years).
+`build_report.jl` inlines the `sma_study` charts, so run those first.
 (`julia` lives at `~/.juliaup/bin/julia` on this machine — not on PATH.)
 
 ## Method
@@ -124,26 +141,29 @@ not a better dot-com hedge.
 
 ## Files
 
+**Docs & module**
 - `STRATEGY.md` — **the deliverable**: chosen strategy, performance over time scales, execution guide
 - `QQQBacktest.jl` — module entry point (`include` + `using .QQQBacktest`)
-- `src/data.jl` — CSV loader for the `../data/` format; `load_ticker` merges all of a ticker's files by date (variable overlap, newest pull wins)
-- `src/indicators.jl` — all indicators computed from OHLCV: SMA/EMA/TMA/RSI/CCI/MACD/Awesome/ADX, rolling stats, returns, drawdown
-- `src/engine.jl` — causal long/flat backtester
-- `src/metrics.jl` — CAGR, Sharpe, Sortino, max drawdown, Calmar, …
-- `src/strategies.jl` — strategy library incl. shorter-horizon hybrids (`fast_reentry`, `regime_macd`, `dual_speed`) and the CCI(50) momentum band (`cci_band`) — add your own here
-- `src/crossasset.jl` — align other ETFs to QQQ + cross-asset signal builders
-- `src/evaluate.jl` — rolling multi-timescale comparison + walk-forward engine (`walk_forward`)
-- `run_analysis.jl` — sweep, rank, pick flagship, write `results/`
-- `walkforward.jl` — out-of-sample parameter-selection tests, chronological splits, hybrid validation
-- `cci_walkforward.jl` — CCI(50)-band out-of-sample validation (band grid, stability, chronological splits)
-- `cci_band_20yr.jl` / `cci_band_sweep.jl` / `cci_band_buy_sweep.jl` / `cci_band_test.jl` — CCI(50)-band sensitivity studies (STRATEGY.md §4b)
-- `cross_asset_analysis.jl` — do other ETFs improve QQQ timing? + 50/200 across all 8 ETFs
-- `report.jl` — per-year / per-decade / per-regime / rolling-CAGR breakdown
-- `signal.jl` — the day-to-day tool: current buy-hold/sell-wait call for the adopted blend, with the trend + momentum filter breakdown
-- `build_blend_pages.jl` — self-contained execution webpages for the two blends (`results/blend_either_on.html`, `results/blend_avg.html`)
-- `blend_finalists_compare.jl` / `blend_walkforward.jl` — blend side-by-side battery and OOS validation (STRATEGY.md §4c)
-- `plot_results.jl` / `plot_hybrid.jl` / `plot_recent.jl` — dependency-free SVG charts (PNG via `rsvg-convert`)
-- `build_report.jl` — assembles the self-contained **`results/QQQ_strategy.html`** (charts inlined)
-- `results/` — CSVs (`strategy_metrics`, `multiscale_flagship`, `cross_asset`, `annual_returns`,
-  `period_returns`, `rolling_cagr`, `walkforward`, `walkforward_equity`, `cci_walkforward`,
-  `cci_walkforward_equity`) + charts (`equity_curves`, `hybrid_vs_fixed`, `recent_10yr`) + `QQQ_strategy.html`
+
+**`src/` — the toolkit**
+- `data.jl` — CSV loader; reads only the 6 trusted columns; `load_ticker` merges all of a ticker's files by date (any overlap, newest pull wins)
+- `indicators.jl` — all indicators computed from OHLCV: SMA/EMA/TMA/RSI/CCI/MACD/Awesome/ADX, rolling stats, returns, drawdown
+- `engine.jl` — causal long/flat backtester · `metrics.jl` — CAGR, Sharpe, Sortino, maxDD, Calmar
+- `strategies.jl` — strategy library: trend filters, the CCI band/TMA-switch (`cci_band_tma_switch`), and the blends (`blend_either_on`, `blend_avg`, `blend_components`)
+- `crossasset.jl` — align other ETFs to QQQ + cross-asset signals · `evaluate.jl` — rolling multi-timescale + `walk_forward`
+
+**`analysis/` (root) — production: the two blend cases**
+- `signal.jl` — **the day-to-day tool**: current buy-hold/sell-wait call for the adopted either-on blend + filter breakdown
+- `build_blend_pages.jl` — self-contained execution webpages (`results/blend_either_on.html`, `results/blend_avg.html`)
+- `blend_finalists_compare.jl` / `blend_walkforward.jl` — side-by-side battery and OOS validation (STRATEGY.md §4c)
+- `plot_blend_finalists.jl` — equity + drawdown chart (`results/blend_finalists.svg`)
+
+**`sma_study/` — the original SMA-flagship study**
+- `run_analysis.jl` (sweep/rank/flagship), `walkforward.jl`, `cross_asset_analysis.jl`, `report.jl`,
+  `plot_results.jl` / `plot_hybrid.jl` / `plot_recent.jl` / `plot_universe.jl`, `build_report.jl`, `build_onepager.jl`
+
+**`tests/` — exploratory / development scripts** (the path to the blend; kept for the record)
+- CCI band & TMA-switch sweeps + walk-forwards (`cci_band_*.jl`, `cci_tma_*.jl`, `cci_walkforward.jl`, `cci_regime_switch_test.jl`),
+  the lost-decade study (`period_1999_2009.jl`), and the earlier finalists comparison (`finalists_compare.jl`, `finalists_blend_test.jl`, `plot_finalists.jl`)
+
+**`results/`** — CSVs + charts + HTML pages (written by the scripts above; `signal.jl` writes nothing)

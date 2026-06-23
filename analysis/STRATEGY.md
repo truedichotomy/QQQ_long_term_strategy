@@ -135,7 +135,7 @@ The full-sample numbers were chosen with hindsight, so we re-ran the study the w
 actually trade it: a 22-strategy grid re-evaluated every year on a training window, the
 best traded the **next** year, OOS segments stitched together. The first OOS year is
 **2004**, so the dot-com crash — the filter's signature win — lands in *training*. A
-deliberately hard test. (`analysis/walkforward.jl`.)
+deliberately hard test. (`analysis/sma_study/walkforward.jl`.)
 
 | OOS 2004–2026 | CAGR | maxDD | Calmar |
 |---|---:|---:|---:|
@@ -225,7 +225,7 @@ the CAGR peak even in the independent prior decade** (not just in the recent one
 found on) — eager re-entry (buy < −60) whipsaws *and* deepens drawdown to ~−42 %; over-patient
 re-entry (buy > +40) bleeds return. The **−120 exit sits in a flat plateau** (−110 to −140 all
 behave similarly); the exit level is a low-leverage knob, the re-entry level is the one that
-matters. See `analysis/cci_band_sweep.jl` (sell), `cci_band_buy_sweep.jl` (buy), and
+matters. See `analysis/tests/cci_band_sweep.jl` (sell), `cci_band_buy_sweep.jl` (buy), and
 `cci_band_20yr.jl` (two-decade sensitivity).
 
 **Walk-forward (out-of-sample).** Re-selecting the band every year from a 25-band grid using
@@ -235,7 +235,7 @@ the fixed −120/−40: over OOS 2004–2026 the fixed rule returns **13.5 %/yr 
 14.6 % at −54 %. The walk-forward consistently lands on −110/0 — one grid-step from −120/−40 —
 and in chronological train/test splits the fixed −120/−40 generalizes forward *better* than the
 in-sample-optimal band. As with the SMA filter, the fact that clever re-optimization can't beat
-the round fixed choice is evidence the choice isn't overfit. (`analysis/cci_walkforward.jl`.)
+the round fixed choice is evidence the choice isn't overfit. (`analysis/tests/cci_walkforward.jl`.)
 
 **The one blemish — the dot-com crash.** Over the *full* 1999–2026 sample its worst drawdown is
 **−66 %, not −22 %**. In the 2000–2002 grind, CCI's mean-reversion re-entries kept buying relief
@@ -302,7 +302,7 @@ exploits.
 We also tested using the other ETFs to **inform** QQQ timing (broad-market confirmation
 from SPY/DIA, small-cap breadth from IWM, risk-on/off vs bonds). All of them *reduced*
 return by adding conservatism — QQQ's own trend already encodes the regime. Don't
-over-engineer it. (`analysis/cross_asset_analysis.jl`.)
+over-engineer it. (`analysis/sma_study/cross_asset_analysis.jl`.)
 
 ---
 
@@ -352,19 +352,22 @@ they're the price of catching real recoveries early.
 
 ```bash
 export PATH="$HOME/.juliaup/bin:$PATH"      # julia lives in ~/.juliaup/bin
-julia analysis/signal.jl                    # today's buy-hold/sell-wait call (the blend + breakdown)
-julia analysis/build_blend_pages.jl         # §4c per-strategy webpages (either-on / avg)
-julia analysis/blend_finalists_compare.jl   # §4c side-by-side battery (either-on vs avg)
-julia analysis/blend_walkforward.jl         # §4c blend OOS validation
-julia analysis/run_analysis.jl              # full strategy sweep + ranking + robustness
-julia analysis/walkforward.jl               # §3 walk-forward / OOS tests (SMA grid)
-julia analysis/cci_walkforward.jl           # §4b walk-forward / OOS tests (CCI band grid)
-julia analysis/cci_band_20yr.jl             # §4b two-decade sensitivity (sell & buy sweeps)
-julia analysis/report.jl                    # per-year / per-decade / per-regime tables
-julia analysis/cross_asset_analysis.jl      # §5 cross-asset study
-julia analysis/plot_hybrid.jl               # the §2 three-way chart
-julia analysis/plot_recent.jl              # the §4 last-10-year relative-performance chart
-julia analysis/build_report.jl              # the standalone HTML version of this document
+# ── production (the two blend cases) — analysis/ root ──
+julia analysis/signal.jl                       # today's buy-hold/sell-wait call (the blend + breakdown)
+julia analysis/build_blend_pages.jl            # §4c per-strategy webpages (either-on / avg)
+julia analysis/blend_finalists_compare.jl      # §4c side-by-side battery (either-on vs avg)
+julia analysis/blend_walkforward.jl            # §4c blend OOS validation
+# ── original SMA-flagship study — analysis/sma_study/ ──
+julia analysis/sma_study/run_analysis.jl       # full strategy sweep + ranking + robustness
+julia analysis/sma_study/walkforward.jl        # §3 walk-forward / OOS tests (SMA grid)
+julia analysis/sma_study/report.jl             # per-year / per-decade / per-regime tables
+julia analysis/sma_study/cross_asset_analysis.jl  # §5 cross-asset study
+julia analysis/sma_study/plot_hybrid.jl        # the §2 three-way chart
+julia analysis/sma_study/plot_recent.jl        # the §4 last-10-year relative-performance chart
+julia analysis/sma_study/build_report.jl       # the standalone HTML version of this document
+# ── exploratory CCI/band sensitivity — analysis/tests/ ──
+julia analysis/tests/cci_walkforward.jl        # §4b walk-forward / OOS tests (CCI band grid)
+julia analysis/tests/cci_band_20yr.jl          # §4b two-decade sensitivity (sell & buy sweeps)
 ```
 
 ---

@@ -3,14 +3,14 @@
 #
 #   julia analysis/plot_hybrid.jl     # -> results/hybrid_vs_fixed.svg
 
-include(joinpath(@__DIR__, "QQQBacktest.jl"))
+include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Dates
 
-const OUTDIR = joinpath(@__DIR__, "results")
+const OUTDIR = joinpath(dirname(@__DIR__), "results")
 const TK = isempty(ARGS) ? "QQQ" : uppercase(ARGS[1])
 const SVG = joinpath(OUTDIR, TK == "QQQ" ? "hybrid_vs_fixed.svg" : "hybrid_$(TK).svg")
-d = load_ticker(TK; dir=joinpath(dirname(@__DIR__), "data"))
+d = load_ticker(TK; dir=joinpath(dirname(dirname(@__DIR__)), "data"))
 bt(s) = run_backtest(d, s; cost=5e-4, rf_annual=0.04).eq
 
 curves = [

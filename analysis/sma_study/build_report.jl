@@ -7,15 +7,15 @@
 #   julia analysis/plot_hybrid.jl analysis/plot_recent.jl analysis/plot_results.jl  # charts first
 #   julia analysis/build_report.jl                                                   # -> results/QQQ_strategy.html
 
-include(joinpath(@__DIR__, "QQQBacktest.jl"))
+include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
-const RES = joinpath(@__DIR__, "results")
+const RES = joinpath(dirname(@__DIR__), "results")
 const OUT = joinpath(RES, "QQQ_strategy.html")
 const COST, RF = 5e-4, 0.04
 
-d = load_ticker("QQQ"; dir=joinpath(dirname(@__DIR__), "data"))
+d = load_ticker("QQQ"; dir=joinpath(dirname(dirname(@__DIR__)), "data"))
 N = length(d)
 bt(sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)
 bh = bt(buyhold(d))                              # baseline
@@ -63,7 +63,7 @@ function wm_ra(eq, dts, a, b)
 end
 rank_rows = []
 for t in UNIVERSE
-    et = load_ticker(t; dir=joinpath(dirname(@__DIR__), "data"))
+    et = load_ticker(t; dir=joinpath(dirname(dirname(@__DIR__)), "data"))
     a, b = date_range(et, Date(2005, 1, 3), et.date[end])
     bestv = nothing
     for (nm, sig) in (("Standard", fast_reentry(et)), ("Conservative", sma_cross(et; fast=50, slow=200)))
@@ -235,7 +235,7 @@ print(io, """<h2>5 · Why QQQ specifically</h2>
 <p>We ran the same 50/200 filter on all ten ETFs in the dataset. The drawdown protection is <b>universal</b>; the return boost is <b>not</b>.</p>
 <table><thead><tr><th>ETF</th><th class="num">B&amp;H CAGR / maxDD</th><th class="num">filter CAGR / maxDD</th><th class="num">ΔCAGR</th><th class="num">ΔmaxDD</th></tr></thead><tbody>""")
 for t in ("QQQ", "VGT", "SOXX", "SPY", "DIA", "IWM", "XLE", "TLT", "GLD", "TIP")
-    et = load_ticker(t; dir=joinpath(dirname(@__DIR__), "data"))
+    et = load_ticker(t; dir=joinpath(dirname(dirname(@__DIR__)), "data"))
     mb = compute_metrics(run_backtest(et, buyhold(et); cost=COST, rf_annual=RF))
     mf = compute_metrics(run_backtest(et, sma_cross(et; fast=50, slow=200); cost=COST, rf_annual=RF))
     dC = mf.cagr - mb.cagr; dD = mf.maxdd - mb.maxdd

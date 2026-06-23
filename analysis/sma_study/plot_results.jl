@@ -5,7 +5,7 @@
 #   julia analysis/run_analysis.jl     # produces the CSV
 #   julia analysis/plot_results.jl     # produces results/equity_curves.svg
 
-const HERE = @__DIR__
+const HERE = dirname(@__DIR__)
 const CSV  = joinpath(HERE, "results", "equity_curves.csv")
 const SVG  = joinpath(HERE, "results", "equity_curves.svg")
 const SUMMARY = joinpath(HERE, "results", "flagship_summary.csv")
