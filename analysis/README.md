@@ -89,7 +89,7 @@ Do **not** rasterize wide SVGs with macOS `qlmanage` (it square-crops and chops 
   beats B&H on return and on drawdown at each scale. This guards against the full-sample
   number being a fluke of one lucky regime exit.
 
-## Headline result
+## The flagship trend filter (the blend's trend component)
 
 This study's flagship is a 50/200 SMA trend filter in two variants — **Standard (fast
 re-entry)** and **Conservative (classic 50/200)**. It is now the **trend component** of
@@ -136,22 +136,48 @@ when price reclaims the 50-day SMA, ~10-day minimum hold) raises return at the s
 | **best balance (flagship)**   | **SMA 50/200**  | 11.9 % | −36 %  | 0.33   |
 | smoothest ride (~B&H return)  | CCI(40)>0 / ADX | 10.3–10.5 % | −28 % | 0.37–0.38 |
 
-There is no free lunch: to beat B&H on *return* per-window you must stay ~fully invested
-(≈B&H, little drawdown relief); to cut drawdown hard you must sit out and give up return.
-Genuinely beating B&H on return likely requires leverage (excluded here) or signals beyond
-daily price/indicator technicals.
+There is no per-window free lunch: to beat B&H on *return* in a typical window you must stay
+~fully invested (≈B&H, little drawdown relief); to cut drawdown hard you must sit out and give
+up return. No *single* filter here beats B&H on return in a typical year without leverage. The
+**blend below is the study's resolution** — by combining two filters with complementary blind
+spots it clears the original bar (beats B&H on full-sample return *and* halves drawdown),
+though even it only ties B&H once the dot-com crash is excluded, so the edge stays
+bear-concentrated rather than a typical-window free lunch.
 
 ### An alternative overlay: the CCI(50) −120/−40 momentum band
 
 A separate, momentum-based risk-reducer (sell when CCI(50) < −120, re-enter when CCI(50) > −40) —
 the **precursor to the blend's momentum filter** ([STRATEGY.md §2b](STRATEGY.md)). Over 2006–2026 — split into two
 independent decades — it cuts max drawdown to ~−22 % (vs B&H's −36 %/−54 %) and roughly doubles
-Calmar in both halves, at ~0.4–1.7 pp/yr less CAGR. Its walk-forward (`cci_walkforward.jl`)
+Calmar in both halves, at ~0.4–1.7 pp/yr less CAGR. Its walk-forward (`tests/cci_walkforward.jl`)
 mirrors the SMA finding: the fixed band beats adaptive re-optimization out-of-sample (Calmar
 0.59 vs 0.46), evidence it isn't overfit. **Caveat:** unlike the SMA filter it handled the
-2000–2002 dot-com grind poorly (full-1999 sample drawdown −66 %, Calmar 0.17), so its clean
-~−22 % drawdown is a 2004-onward property — it's the smoother-ride option in the modern era,
-not a better dot-com hedge.
+2000–2002 dot-com grind poorly (full-1999 sample drawdown −66 %, Calmar 0.17). That weakness
+was later fixed by gating its exit on a 200-day triangular-MA slope (→ `cci_band_tma_switch`),
+which became the blend's momentum filter (below).
+
+## The result — the either-on blend (the adopted strategy)
+
+The study's two risk-reducers fail in *opposite* regimes: the **SMA trend filter** is blind to
+fast crashes (it sat through COVID at −29 %) but handles slow grinding bears; the **CCI/TMA
+momentum filter** reacts fast to crashes but, alone, gets chopped up in a multi-year bear.
+Blending them — **hold QQQ unless *both* say "out"** (`blend_either_on`) — covers both:
+
+| 1999–2026 | either-on blend | avg ½ blend | buy & hold |
+|---|---:|---:|---:|
+| CAGR | **15.3 %** | 13.7 % | 10.2 % |
+| Growth of \$1 | **48×** | 34× | 14× |
+| Max drawdown | −37 % | **−33 %** | −83 % |
+| Calmar | 0.41 | **0.42** | 0.12 |
+| Trades/yr | **~3** | ~12 | 0 |
+
+This is the only candidate in the study to **beat B&H on full-sample return *and* roughly
+halve its drawdown** — the bar the study set out to clear. It stays consistent with the "no
+free lunch" read above: the return edge is bear-concentrated (out-of-sample 2004+, with the
+dot-com crash excluded, `either-on` *ties* B&H at 14.9 % vs 14.5 %, just at half the drawdown).
+`either-on` is the adopted default (max return, ~3 trades/yr, all-in/all-out); `avg` is the
+smoother ½-size alternative that also cushions fast crashes. Full strategy, performance and
+execution: **[STRATEGY.md](STRATEGY.md)**; it's what `signal.jl` reports.
 
 ## Files
 
