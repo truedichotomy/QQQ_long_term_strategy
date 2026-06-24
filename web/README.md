@@ -7,11 +7,14 @@ Everything runs in your browser; nothing is uploaded.
 
 ## Use it
 
-1. Open **`web/index.html`** (double-click — works straight from `file://`). It immediately
-   shows the current signal computed from the bundled data, with the two filter states and the
-   last-bars table. A **tab at the top switches the view between the two blends** — *Either-on*
-   (all-in / all-out) and *Avg ½-size* (0 / 50 / 100% exposure). (Deep-link with
-   `index.html?blend=avg`; the choice is remembered.)
+1. Open **`web/index.html`** (double-click — works straight from `file://`; the layout is
+   responsive, so it's fine on a phone too). It immediately shows the current signal computed
+   from the bundled data, with the two filter states and the last-bars table.
+   - A **tab** switches the view between the two blends — *Either-on* (all-in / all-out) and
+     *Avg ½-size* (0 / 50 / 100% exposure).
+   - An **"as of" date** next to the tabs computes the signal for any past trading day (handy
+     for checking what the call was at, say, the 2008 bottom); **↻ latest** jumps back.
+   - Both are deep-linkable and remembered: `index.html?blend=avg&asof=2008-11-20`.
 2. **To update:** drop a newer QQQ CSV onto the "update" zone (or click to choose). New bars
    are **merged into a local database and deduplicated by date** (on an overlapping date the
    uploaded value wins). The merged database is **saved in your browser** (`localStorage`) and

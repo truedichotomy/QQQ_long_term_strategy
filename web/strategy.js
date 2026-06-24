@@ -155,35 +155,56 @@
   function lastChange(s) { var lc = 0; for (var i = 1; i < s.length; i++) if (s[i] !== s[i - 1]) lc = i; return lc; }
 
   // ---------- top level ----------
-  function computeSignal(rows) {
-    var n = rows.length;
-    if (n < 201) throw new Error('Need at least ~201 daily bars for the 200-day averages; got ' + n + '.');
+  // Compute every series once over the whole history (indicators + both blends), so the
+  // signal "as of" any date is just a cheap read at that index (see signalAt).
+  function analyze(rows) {
     var d = {
       date: rows.map(function (r) { return r.date; }), close: rows.map(function (r) { return r.c; }),
       high: rows.map(function (r) { return r.h; }), low: rows.map(function (r) { return r.l; }),
       open: rows.map(function (r) { return r.o; }), volume: rows.map(function (r) { return r.v; })
     };
-    var s50 = sma(d.close, 50), s200 = sma(d.close, 200);
-    var c40 = cci(d.high, d.low, d.close, 40), t200 = tma(d.close, 200);
     var comp = blendComponents(d), mom = comp.momentum, tr = comp.trend;
-    var either = mom.map(function (v, i) { return Math.max(v, tr[i]); });
-    var avg = mom.map(function (v, i) { return (v + tr[i]) / 2; });
-    var i = n - 1, lb = 20;
-    var bear = (i >= lb) && !isNaN(t200[i]) && !isNaN(t200[i - lb]) && (t200[i] < t200[i - lb]);
     return {
-      rows: n, firstDate: d.date[0], asOf: d.date[i], close: d.close[i],
-      sma50: s50[i], sma200: s200[i], cci40: c40[i], tmaDown: bear, momExit: bear ? 0 : -100,
-      trendIn: tr[i] === 1, trendSince: d.date[lastChange(tr)],
-      momIn: mom[i] === 1, momSince: d.date[lastChange(mom)],
-      eitherLong: either[i] === 1, eitherSince: d.date[lastChange(either)],
-      avgExposure: avg[i], avgSince: d.date[lastChange(avg)],
-      recent: rows.slice(Math.max(0, n - 8))
+      rows: rows, date: d.date, close: d.close,
+      s50: sma(d.close, 50), s200: sma(d.close, 200),
+      c40: cci(d.high, d.low, d.close, 40), t200: tma(d.close, 200),
+      mom: mom, tr: tr,
+      either: mom.map(function (v, i) { return Math.max(v, tr[i]); }),
+      avg: mom.map(function (v, i) { return (v + tr[i]) / 2; })
     };
+  }
+
+  // Last index ≤ i where the signal flips (the "since" date, as known at index i).
+  function lastChangeUpTo(s, i) { var lc = 0; for (var k = 1; k <= i; k++) if (s[k] !== s[k - 1]) lc = k; return lc; }
+
+  // First index where the 200-day average is valid — the earliest analyzable date.
+  function firstValidIndex(a) { for (var i = 0; i < a.s200.length; i++) if (!isNaN(a.s200[i])) return i; return Math.max(0, a.s200.length - 1); }
+
+  // The full signal as it stood at the close of bar `i` (everything is causal).
+  function signalAt(a, i) {
+    var lb = 20;
+    var bear = (i >= lb) && !isNaN(a.t200[i]) && !isNaN(a.t200[i - lb]) && (a.t200[i] < a.t200[i - lb]);
+    return {
+      index: i, rows: a.rows.length, isLatest: i === a.rows.length - 1,
+      firstDate: a.date[0], asOf: a.date[i], close: a.close[i],
+      sma50: a.s50[i], sma200: a.s200[i], cci40: a.c40[i], tmaDown: bear, momExit: bear ? 0 : -100,
+      trendIn: a.tr[i] === 1, trendSince: a.date[lastChangeUpTo(a.tr, i)],
+      momIn: a.mom[i] === 1, momSince: a.date[lastChangeUpTo(a.mom, i)],
+      eitherLong: a.either[i] === 1, eitherSince: a.date[lastChangeUpTo(a.either, i)],
+      avgExposure: a.avg[i], avgSince: a.date[lastChangeUpTo(a.avg, i)],
+      recent: a.rows.slice(Math.max(0, i - 7), i + 1)
+    };
+  }
+
+  function computeSignal(rows) {
+    if (rows.length < 201) throw new Error('Need at least ~201 daily bars for the 200-day averages; got ' + rows.length + '.');
+    return signalAt(analyze(rows), rows.length - 1);
   }
 
   var API = {
     parseCSV: parseCSV, mergeFiles: mergeFiles, mergeRows: mergeRows, rowsToCSV: rowsToCSV,
-    computeSignal: computeSignal, sma: sma, tma: tma, cci: cci, fastReentry: fastReentry,
+    analyze: analyze, signalAt: signalAt, firstValidIndex: firstValidIndex, computeSignal: computeSignal,
+    sma: sma, tma: tma, cci: cci, fastReentry: fastReentry,
     cciBandTmaSwitch: cciBandTmaSwitch, blendComponents: blendComponents
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

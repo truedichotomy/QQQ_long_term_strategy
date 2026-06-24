@@ -12,8 +12,13 @@
         padding:30px 34px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
   h1{font-size:22px;line-height:1.15}
   .sub{color:#555;font-size:14px;margin:6px 0 14px}
-  /* blend tabs */
-  .tabs{display:inline-flex;border:1px solid #d7dbe0;border-radius:9px;overflow:hidden;margin:0 0 8px}
+  /* controls: blend tabs + as-of date */
+  .controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 8px}
+  .tabs{display:inline-flex;border:1px solid #d7dbe0;border-radius:9px;overflow:hidden}
+  .asofctl{font-size:13px;color:#555;display:inline-flex;align-items:center;gap:6px}
+  .asofctl input[type=date]{font:inherit;font-size:13px;padding:6px 9px;border:1px solid #d7dbe0;border-radius:8px;color:#1a1a1a;background:#fff;min-height:34px}
+  .asoflatest{font-size:12px;color:#1f6feb;cursor:pointer;background:none;border:none;text-decoration:underline;padding:0}
+  .asoflatest.hidden{display:none}
   .tabs button{border:none;background:#fff;color:#555;font:inherit;font-size:13.5px;padding:7px 18px;cursor:pointer}
   .tabs button+button{border-left:1px solid #e3e6ea}
   .tabs button.active{background:#1f2937;color:#fff;font-weight:600}
@@ -42,6 +47,7 @@
   th{background:#f6f7f9;font-size:11px;color:#555;font-weight:600}
   tr:last-child td{border-bottom:none}
   tr.today td{background:#f3f8ff;font-weight:600}
+  .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   /* update controls */
   #update{margin-top:20px;border-top:1px solid #eef1f4;padding-top:16px}
   #drop{border:2px dashed #c7ccd2;border-radius:9px;padding:14px 16px;text-align:center;color:#667;
@@ -55,6 +61,20 @@
   .err{background:#fdecec;border:1px solid #f3c2c2;color:#a3171f;border-radius:8px;padding:11px 14px;font-size:13.5px;margin:8px 0}
   .foot{margin-top:20px;border-top:1px solid #e3e6ea;padding-top:12px;color:#888;font-size:11.5px}
   code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:12px;background:#eef1f4;padding:1px 5px;border-radius:4px}
+  /* iPhone / narrow screens */
+  @media (max-width:480px){
+    body{padding:12px 8px}
+    .wrap{padding:18px 15px;border-radius:10px}
+    h1{font-size:20px}
+    .controls{gap:9px}
+    .asofctl{font-size:12.5px}
+    .tabs button{padding:7px 13px;font-size:13px}
+    .sigaction{font-size:21px}
+    .sigsub{display:block;margin-left:0;margin-top:2px;font-size:13.5px}
+    .bn{min-width:0}
+    th,td{padding:5px 7px;font-size:11.5px}
+    .foot{font-size:11px}
+  }
 </style>
 </head>
 <body>
@@ -63,9 +83,13 @@
   <div class="sub">Today's call for the QQQ <b>blend overlay</b>, computed in your browser from the
     bundled history. No server, nothing uploaded.</div>
 
-  <div class="tabs" id="tabs">
-    <button data-blend="either">Either‑on</button>
-    <button data-blend="avg">Avg (½‑size)</button>
+  <div class="controls">
+    <div class="tabs" id="tabs">
+      <button data-blend="either">Either‑on</button>
+      <button data-blend="avg">Avg (½‑size)</button>
+    </div>
+    <label class="asofctl">as&nbsp;of <input type="date" id="asof"></label>
+    <button class="asoflatest hidden" id="latest">↻ latest</button>
   </div>
   <div class="blenddesc" id="blenddesc"></div>
 
