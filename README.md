@@ -19,6 +19,10 @@ julia --startup-file=no analysis/signal.jl
 
 Prints the current **buy-hold / sell-wait** call with the two-filter breakdown.
 
+**No Julia?** Open **[web/index.html](web/index.html)** in any browser and drop your QQQ data
+file(s) onto it — the same signal, computed entirely client-side (HTML/CSS/JS, no server, no
+upload). See [web/README.md](web/README.md).
+
 To refresh the data first (no manual download, no data-service site), fetch the latest
 bars from a free public source and re-run:
 

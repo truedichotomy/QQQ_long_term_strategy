@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QQQ Blend Signal</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+       color:#1a1a1a;background:#f6f7f9;padding:28px 16px}
+  .wrap{max-width:760px;margin:0 auto;background:#fff;border:1px solid #e3e6ea;border-radius:12px;
+        padding:30px 34px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+  h1{font-size:22px;line-height:1.15}
+  .sub{color:#555;font-size:14px;margin:6px 0 18px}
+  /* drop zone */
+  #drop{border:2px dashed #c7ccd2;border-radius:10px;padding:26px 18px;text-align:center;color:#667;
+        background:#fafbfc;cursor:pointer;transition:.15s;font-size:14.5px}
+  #drop:hover,#drop.over{border-color:#1f6feb;background:#eef5ff;color:#1f6feb}
+  #drop b{color:#333}
+  #drop.over b{color:#1f6feb}
+  .hint{color:#8a9099;font-size:12.5px;margin-top:7px}
+  /* signal card */
+  .signal{border-radius:10px;padding:16px 18px;margin:18px 0 4px;border:1px solid}
+  .signal.buy{background:#eafaf0;border-color:#bce9cd}
+  .signal.sell{background:#fdecec;border-color:#f3c2c2}
+  .signal.half{background:#fff7e8;border-color:#f0dca8}
+  .sigaction{font-size:24px;font-weight:800;letter-spacing:.2px}
+  .signal.buy .sigaction{color:#0a7f3f}.signal.sell .sigaction{color:#c1121f}.signal.half .sigaction{color:#9a6700}
+  .sigsub{margin-left:9px;font-size:15px;color:#333}
+  .sigasof{color:#555;font-size:12.5px;margin:5px 0 12px}
+  .brk{font-size:13.5px}
+  .brow{display:flex;align-items:center;gap:9px;padding:3px 0;flex-wrap:wrap}
+  .bn{min-width:280px;font-weight:600}
+  .bd{color:#555;font-size:12.5px}
+  .chip{font-size:11px;font-weight:700;padding:1px 8px;border-radius:11px;color:#fff}
+  .chip.in{background:#0a7f3f}.chip.out{background:#c1121f}
+  .bcombine{margin-top:9px;padding-top:9px;border-top:1px dashed #d7dbe0;font-size:13px}
+  /* meta + table */
+  .meta{color:#667;font-size:12.5px;margin:10px 0 2px}
+  table{border-collapse:collapse;width:100%;font-size:12.5px;margin:10px 0;border:1px solid #eceef0;border-radius:8px;overflow:hidden}
+  th,td{padding:5px 9px;text-align:right;border-bottom:1px solid #f1f3f5}
+  th:first-child,td:first-child{text-align:left}
+  th{background:#f6f7f9;font-size:11px;color:#555;font-weight:600}
+  tr:last-child td{border-bottom:none}
+  tr.today td{background:#f3f8ff;font-weight:600}
+  .err{background:#fdecec;border:1px solid #f3c2c2;color:#a3171f;border-radius:8px;padding:11px 14px;font-size:13.5px;margin:14px 0}
+  .reload{font-size:12.5px;color:#1f6feb;cursor:pointer;text-decoration:underline;background:none;border:none;padding:0;margin-top:10px}
+  .foot{margin-top:22px;border-top:1px solid #e3e6ea;padding-top:12px;color:#888;font-size:11.5px}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:12px;background:#eef1f4;padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>QQQ Blend Signal</h1>
+  <div class="sub">Drop your QQQ data file to get today's <b>buy‑hold / sell‑wait</b> call for the
+    adopted <b>either‑on blend</b> — computed entirely in your browser, no server, no upload.</div>
+
+  <div id="drop">
+    <b>Drop your QQQ data file(s) here</b> — or click to choose<br>
+    <span class="hint">e.g. the CSV(s) from the project's <code>data/</code> folder. Drop the long
+      history file (and any fresh overlapping pull); they're merged by date. Needs ≥ ~1 year of bars.</span>
+  </div>
+  <input id="file" type="file" accept=".csv,text/csv" multiple style="display:none">
+
+  <div id="out"></div>
+
+  <div class="foot">
+    Long/flat timing overlay: in QQQ unless <b>both</b> a 50/200 SMA trend filter and a CCI(40)/TMA(200)
+    momentum filter are out; re‑enter when either turns back in. Indicators are computed from the
+    OHLCV columns only; the trade is acted on the next session (no look‑ahead). This is a mechanical
+    backtest rule, <b>not investment advice</b>. See <code>analysis/STRATEGY.md</code> for the full method.
+  </div>
+</div>
+<script src="strategy.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

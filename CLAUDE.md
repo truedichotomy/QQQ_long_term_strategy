@@ -22,6 +22,7 @@ julia --startup-file=no analysis/sma_study/plot_results.jl  # render results/sma
 
 - `data/` — per-ETF historical CSVs for **DIA, GLD, IWM, QQQ, SPY, TIP, TLT, XLE**. Filenames encode the range as `TICKER (ENDts _ STARTts).csv` (17-digit `YYYYMMDD...`). A ticker may have **multiple** files (a long history plus a fresh overlapping pull); `load_ticker` merges all of them by date — overlap of any size is deduped, newest pull (larger end-timestamp) wins. Drop in a newer file to extend the series.
 - `analysis/` — the backtesting toolkit and drivers (below). Outputs land in `analysis/results/`, which **mirrors the script layout**: blend artifacts in `results/` root, `results/sma_study/`, `results/tests/`.
+- `web/` — a browser version of the signal (plain HTML/CSS/JS, no server): open `web/index.html`, drop the QQQ data file(s) on it, get the call. `web/strategy.js` is a faithful port of `src/{indicators,strategies}.jl`, verified against `signal.jl` via `node web/verify_node.js`. Keep it in sync if the adopted strategy or data format changes.
 
 ### `analysis/` structure
 - **Module** — `QQQBacktest.jl` + `src/{data,indicators,engine,metrics,strategies,crossasset,evaluate}.jl`: a causal **long/flat** backtester that judges strategies on CAGR **and** max drawdown vs buy-and-hold, with rolling multi-timescale robustness. Signals are lagged one day (no look-ahead); cash earns a configurable rate; turnover is charged a cost.
