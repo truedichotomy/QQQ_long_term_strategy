@@ -55,6 +55,21 @@
     return Object.keys(byDate).sort().map(function (d) { return byDate[d]; });
   }
 
+  // Merge several already-parsed row lists by date; later lists win on duplicate dates
+  // (used to layer uploaded data on top of the bundled default). Dedupes, sorts by date.
+  function mergeRows(arrays) {
+    var byDate = {};
+    arrays.forEach(function (rows) { (rows || []).forEach(function (r) { byDate[r.date] = r; }); });
+    return Object.keys(byDate).sort().map(function (d) { return byDate[d]; });
+  }
+
+  // Serialize rows back to a compact CSV (for localStorage persistence).
+  function rowsToCSV(rows) {
+    return rows.map(function (r) {
+      return r.date + ',' + r.o + ',' + r.h + ',' + r.l + ',' + r.c + ',' + r.v;
+    }).join('\n');
+  }
+
   // ---------- indicators (match src/indicators.jl exactly) ----------
   function sma(x, n) {
     var m = x.length, out = new Array(m).fill(NaN), acc = 0;
@@ -167,8 +182,8 @@
   }
 
   var API = {
-    parseCSV: parseCSV, mergeFiles: mergeFiles, computeSignal: computeSignal,
-    sma: sma, tma: tma, cci: cci, fastReentry: fastReentry,
+    parseCSV: parseCSV, mergeFiles: mergeFiles, mergeRows: mergeRows, rowsToCSV: rowsToCSV,
+    computeSignal: computeSignal, sma: sma, tma: tma, cci: cci, fastReentry: fastReentry,
     cciBandTmaSwitch: cciBandTmaSwitch, blendComponents: blendComponents
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

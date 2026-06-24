@@ -1,40 +1,51 @@
 # web/ — the QQQ blend signal in the browser
 
 A zero-dependency, zero-server reimplementation of `analysis/signal.jl` in plain
-HTML/CSS/JS. **Drop your QQQ data file(s) onto the page and it prints today's
-buy-hold / sell-wait call** for the adopted *either-on* blend — all computed in your
-browser, nothing uploaded.
+HTML/CSS/JS. **The QQQ history is bundled in, so it shows today's buy-hold / sell-wait
+call the moment you open it** — and you can drop in newer data to keep it current.
+Everything runs in your browser; nothing is uploaded.
 
 ## Use it
 
-1. Open **`web/index.html`** (double-click it — works straight from `file://`).
-2. **Drop your QQQ CSV(s) onto the drop zone** (or click to choose). Use the file(s)
-   from the project's `data/` folder — drop the long history file *and* any fresh
-   overlapping pull; they're merged by date the same way `load_ticker` does it.
-3. Read the signal card: the BUY/HOLD or SELL/WAIT call, the two filter states, and the
-   ½-size `avg` exposure.
+1. Open **`web/index.html`** (double-click — works straight from `file://`). It immediately
+   shows the current signal for the adopted *either-on* blend, computed from the bundled
+   data (through the last bundled date), with the two filter states and the last-bars table.
+2. **To update:** drop a newer QQQ CSV onto the "update" zone (or click to choose). New bars
+   are **merged into a local database and deduplicated by date** (on an overlapping date the
+   uploaded value wins). The merged database is **saved in your browser** (`localStorage`) and
+   reused on the next visit, so each upload accumulates. *Reset to bundled data* clears it.
 
-To refresh: get an updated data file (e.g. `julia analysis/fetch_data.jl` writes one into
-`data/`, or export a new one), drop it in along with the history file, and the signal
-updates. Needs ≥ ~1 year of daily bars (the 200-day averages have a 200-bar warm-up; the
-full history gives the most accurate carried-forward state).
+You can drop the file(s) from the project's `data/` folder, or a fresh export
+(`julia analysis/fetch_data.jl` writes one into `data/`). Multiple files dropped at once are
+merged together first (newest pull wins), then merged into the database.
 
-### Optional: auto-load when served
-If you serve the folder over http (e.g. `python3 -m http.server --directory web`), the page
-auto-loads a co-located **`qqq.csv`** on startup, so you can refresh by replacing that one
-file. (`qqq.csv` is git-ignored; from `file://` the page just waits for a drop.)
+## Keeping the bundle current (maintainer)
+
+The bundled history lives in **`web/data.js`** (generated, not hand-edited). After updating
+the project's `data/` folder, regenerate it:
+
+```bash
+node web/build_data.js     # rebuilds web/data.js from data/
+```
+
+End users never need this — they just drop a file in the page. It's only to refresh the
+*default* bundled data shipped with the app.
 
 ## What's inside
 
 - `index.html` — the page (inline CSS).
-- `strategy.js` — the pure computation: CSV parse + date-merge, the indicators
-  (SMA / TMA / CCI from OHLCV), the two component filters (`fastReentry`,
-  `cciBandTmaSwitch`), and the blend. A faithful port of
-  `analysis/src/{indicators,strategies}.jl`. No DOM — usable in Node too.
-- `app.js` — UI glue (drag-drop, FileReader, rendering).
+- `data.js` — the bundled QQQ history (`window.QQQ_DATA`, a compact CSV string). Generated.
+- `strategy.js` — the pure computation: CSV parse, date-merge/dedupe (`mergeFiles`,
+  `mergeRows`), the indicators (SMA / TMA / CCI from OHLCV), the two component filters
+  (`fastReentry`, `cciBandTmaSwitch`), and the blend. A faithful port of
+  `analysis/src/{indicators,strategies}.jl`. No DOM — runs in Node too.
+- `app.js` — UI glue: render-on-load from the bundle, drag-drop upload, `localStorage`
+  database (merge + dedupe + persist), status line, reset.
+- `build_data.js` — regenerates `data.js` from `data/`.
 - `verify_node.js` — dev check: `node web/verify_node.js` runs `strategy.js` over the real
-  `data/` files; its output matches `julia analysis/signal.jl` exactly (verified:
-  same 6,864 bars, close, filter states, since-dates, and call).
+  `data/` files; its output matches `julia analysis/signal.jl` exactly.
 
-Only the first 6 columns (Date, OHLC, Volume) are read; everything else in the file is
-ignored, and every indicator is recomputed from price — identical to the Julia pipeline.
+Only the first 6 columns (Date, OHLC, Volume) are read; everything else is ignored and every
+indicator is recomputed from price — identical to the Julia pipeline. **Verified:** the JS
+port and the bundle both reproduce the Julia signal exactly (same 6,864 bars, close, filter
+states, since-dates, and call).
