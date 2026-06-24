@@ -11,13 +11,20 @@
   .wrap{max-width:760px;margin:0 auto;background:#fff;border:1px solid #e3e6ea;border-radius:12px;
         padding:30px 34px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
   h1{font-size:22px;line-height:1.15}
-  .sub{color:#555;font-size:14px;margin:6px 0 16px}
+  .sub{color:#555;font-size:14px;margin:6px 0 14px}
+  /* blend tabs */
+  .tabs{display:inline-flex;border:1px solid #d7dbe0;border-radius:9px;overflow:hidden;margin:0 0 8px}
+  .tabs button{border:none;background:#fff;color:#555;font:inherit;font-size:13.5px;padding:7px 18px;cursor:pointer}
+  .tabs button+button{border-left:1px solid #e3e6ea}
+  .tabs button.active{background:#1f2937;color:#fff;font-weight:600}
+  .blenddesc{color:#8a9099;font-size:12.5px;margin:0 0 12px;min-height:1.2em}
   /* signal card */
   .signal{border-radius:10px;padding:16px 18px;margin:4px 0;border:1px solid}
   .signal.buy{background:#eafaf0;border-color:#bce9cd}
   .signal.sell{background:#fdecec;border-color:#f3c2c2}
+  .signal.half{background:#fff7e8;border-color:#f0dca8}
   .sigaction{font-size:24px;font-weight:800;letter-spacing:.2px}
-  .signal.buy .sigaction{color:#0a7f3f}.signal.sell .sigaction{color:#c1121f}
+  .signal.buy .sigaction{color:#0a7f3f}.signal.sell .sigaction{color:#c1121f}.signal.half .sigaction{color:#9a6700}
   .sigsub{margin-left:9px;font-size:15px;color:#333}
   .sigasof{color:#555;font-size:12.5px;margin:5px 0 12px}
   .brk{font-size:13.5px}
@@ -53,8 +60,14 @@
 <body>
 <div class="wrap">
   <h1>QQQ Blend Signal</h1>
-  <div class="sub">Today's <b>buy‑hold / sell‑wait</b> call for the adopted <b>either‑on blend</b> —
-    computed in your browser from the bundled QQQ history. No server, nothing uploaded.</div>
+  <div class="sub">Today's call for the QQQ <b>blend overlay</b>, computed in your browser from the
+    bundled history. No server, nothing uploaded.</div>
+
+  <div class="tabs" id="tabs">
+    <button data-blend="either">Either‑on</button>
+    <button data-blend="avg">Avg (½‑size)</button>
+  </div>
+  <div class="blenddesc" id="blenddesc"></div>
 
   <div id="out"></div>
 

@@ -176,7 +176,7 @@
       trendIn: tr[i] === 1, trendSince: d.date[lastChange(tr)],
       momIn: mom[i] === 1, momSince: d.date[lastChange(mom)],
       eitherLong: either[i] === 1, eitherSince: d.date[lastChange(either)],
-      avgExposure: avg[i],
+      avgExposure: avg[i], avgSince: d.date[lastChange(avg)],
       recent: rows.slice(Math.max(0, n - 8))
     };
   }

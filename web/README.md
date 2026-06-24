@@ -8,8 +8,10 @@ Everything runs in your browser; nothing is uploaded.
 ## Use it
 
 1. Open **`web/index.html`** (double-click — works straight from `file://`). It immediately
-   shows the current signal for the adopted *either-on* blend, computed from the bundled
-   data (through the last bundled date), with the two filter states and the last-bars table.
+   shows the current signal computed from the bundled data, with the two filter states and the
+   last-bars table. A **tab at the top switches the view between the two blends** — *Either-on*
+   (all-in / all-out) and *Avg ½-size* (0 / 50 / 100% exposure). (Deep-link with
+   `index.html?blend=avg`; the choice is remembered.)
 2. **To update:** drop a newer QQQ CSV onto the "update" zone (or click to choose). New bars
    are **merged into a local database and deduplicated by date** (on an overlapping date the
    uploaded value wins). The merged database is **saved in your browser** (`localStorage`) and
