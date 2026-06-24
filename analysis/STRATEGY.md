@@ -1,378 +1,258 @@
-# QQQ Trend-Filter Strategy
+# QQQ Timing Overlay — the either-on blend
 
-**A long/flat timing rule for QQQ that captures most of buy-and-hold's return while
-cutting its worst drawdown by more than half.** It comes in two variants:
+**A long/flat timing rule for QQQ that beats buy-and-hold's return over the full record
+while cutting its worst drawdown by roughly half — at about three trades a year.** It
+blends two filters that fail in *opposite* market regimes, so together they cover both.
+Two variants:
 
-- **Standard (fast re-entry)** — the central strategy. Steps aside in downtrends but
-  re-enters quickly once price recovers, capturing more upside.
-- **Conservative (classic 50/200)** — simpler and lower-maintenance: the same crash
-  protection, but it waits for a full trend reversal to re-enter, trading ~1×/yr.
+- **either-on** *(the adopted default)* — in QQQ unless **both** filters say "out."
+  Highest return, ~3 trades/yr, simple all-in/all-out.
+- **avg (½-size)** — hold the *average* of the two filters (0 / 50 / 100 % invested).
+  Smoothest ride, cushions every crash type, but ~12 trades/yr and fractional positions.
 
-| (1999–2026, cash 4%/yr, 5 bps/trade) | **Standard** | Conservative | buy & hold |
+| (1999–2026, cash 4 %/yr, 5 bps/trade) | **either-on** | avg (½) | buy & hold |
 |---|---:|---:|---:|
-| CAGR | **14.4 %** | 11.9 % | 10.3 % |
-| Growth of \$1 | **39.0×** | 21.2× | 14.5× |
-| Worst drawdown | **−36 %** | −36 % | −83 % |
-| Sharpe / Sortino / Calmar | **0.58 / 0.82 / 0.40** | 0.49 / 0.70 / 0.33 | 0.35 / 0.51 / 0.12 |
-| Out-of-sample CAGR (2004+) | **14.1 %** | 12.4 % | 14.7 % |
-| Out-of-sample drawdown | −29 % | −29 % | −54 % |
-| Trades per year | ~5 | ~1.3 | 0 |
-| Worst 10-yr return | **+5 %/yr** | +4 %/yr | −8 %/yr |
+| CAGR | **15.3 %** | 13.7 % | 10.2 % |
+| Growth of \$1 | **48×** | 34× | 14× |
+| Worst drawdown | −37 % | **−33 %** | −83 % |
+| Sharpe / Sortino / Calmar | 0.59 / 0.84 / 0.41 | **0.61 / 0.85 / 0.42** | 0.35 / 0.50 / 0.12 |
+| Out-of-sample 2004+ CAGR / maxDD | **14.9 % / −32 %** | 13.2 % / −25 % | 14.5 % / −54 % |
+| Trades per year | **~3** | ~12 | 0 |
+| Worst 10-yr return | **+5 %/yr** | +5 %/yr | −8 %/yr |
 
-*Signals are computed at the close and acted on the next session (no look-ahead). Full
-methodology and the strategies that lost are in [README.md](README.md).*
+*Signals are computed at the close and acted on the next session (no look-ahead); all P&L
+is close-to-close. Full methodology and the strategies that lost are in [README.md](README.md).*
+
+**Where it stands today** (run `julia analysis/signal.jl` for live status):
+
+```
+QQQ as of 2026-06-23:  close 719   SMA-50 698 > SMA-200 630   CCI(40) 27
+  Trend filter (SMA 50/200 fast-reentry):    IN  since 2025-06-30
+  Momentum filter (CCI(40) -100/0 + TMA):    IN  since 2026-04-08
+  ► either-on:  ▲ BUY / HOLD — 100% QQQ        ► avg: 100% QQQ
+```
 
 ---
 
 ## 1. What the strategy is
 
-Two moving averages of QQQ's daily **closing** price — the 50-day (≈10 weeks) and the
-200-day (≈10 months) — define the trend regime:
+The blend combines a **slow trend filter** and a **fast momentum filter**, each of which
+is independently a long/flat QQQ overlay (details in §2). The point of blending is that
+their weaknesses are complementary:
+
+- the **trend filter** is blind to *sudden* crashes (a 200-day average can't turn in a
+  month — it sat through COVID at −29 %), but it handles long grinding bears well;
+- the **momentum filter** reacts fast to crashes (−13 % in COVID) but, on its own, can be
+  chopped up in a multi-year saw-toothed bear.
+
+So one is strong exactly where the other is weak. The two blend rules:
 
 ```
-Standard (fast re-entry):
-  • Hold 100% QQQ while SMA-50 > SMA-200 (uptrend).
-  • Exit to cash when SMA-50 < SMA-200 (a "death cross").
-  • After an exit, re-enter as soon as QQQ closes back above its 50-day SMA
-    — do NOT wait for the next golden cross.
-  • Keep each position at least ~10 trading days (≈2 weeks) before switching
-    again, to avoid whipsaw.
+either-on  (adopted default):
+  • Hold QQQ whenever EITHER filter is "in."
+  • Move to cash only when BOTH filters are "out"; re-enter the moment either turns "in."
+  • All-in or all-out. ~3 trades/yr.
 
-Conservative (classic 50/200):
-  • Hold QQQ while SMA-50 > SMA-200; hold cash otherwise.
-  • (Re-enter only on the golden cross — simpler, slower, fewer trades.)
+avg (½-size):
+  • QQQ weight = (trend_in + momentum_in) / 2  →  0 %, 50 %, or 100 %.
+  • Half-sized when the two disagree. ~12 trades/yr, fractional positions.
 ```
 
-Both are **trend filters**: they stay invested while the trend is up and step aside
-when the long trend rolls over. They don't predict — they react, lagging turns by
-design so they aren't faked out by every wiggle. The only difference is *how fast they
-get back in* after stepping aside. The Standard variant's faster re-entry is what lets
-it recover most of the return a pure 50/200 filter gives up.
-
-**Where it stands today** (run `julia analysis/signal.jl` for live status):
-
-```
-QQQ as of 2026-05-29:  close 738.31   SMA-50 652.93 > SMA-200 617.85
-Standard:     ▲ LONG  (re-entered 2025-06-30)
-Conservative: ▲ LONG  (golden cross 2025-06-24)
-```
+`either-on` maximizes return and minimizes effort; `avg` trades some return and turnover
+for the smoothest, most consistent drawdown control. They are risk-adjusted equivalents
+(Calmar 0.41 vs 0.42) — the choice is return-and-simplicity vs smoothness (see §3).
 
 ---
 
-## 2. Performance across time scales
+## 2. The two component filters
 
-The most important fact about both variants: **their return edge is concentrated in
-bear markets, and they lag in sustained bulls.** They are best understood as downside
-insurance that, on QQQ, has historically paid for itself.
+### 2a. Trend filter — SMA 50/200 with fast re-entry
 
-![Standard vs Conservative vs buy & hold](results/sma_study/hybrid_vs_fixed.svg)
+Two moving averages of QQQ's daily **close** define the regime:
 
-### 2a. By decade — annualized return / max drawdown
+```
+  • Hold QQQ while SMA-50 > SMA-200 (uptrend).
+  • Exit to cash on a "death cross" (SMA-50 < SMA-200).
+  • After an exit, re-enter as soon as price closes back above its 50-day SMA
+    — don't wait for the next golden cross.
+  • Keep each position ~10 trading days before switching again (anti-whipsaw).
+```
 
-| decade | buy & hold | Standard | Conservative |
-|---|---:|---:|---:|
-| 2000s | **−7.0 %** / −83 % | **+6.4 %** / −36 % | +5.8 % / −36 % |
-| 2010s | **+16.5 %** / −23 % | +12.7 % / −18 % | +12.0 % / −20 % |
-| 2020s | +21.1 % / −36 % | **+21.8 %** / −29 % | +21.1 % / −29 % |
+It reacts to the *long* trend, lagging turns by design so it isn't faked out by wiggles.
+Standalone it returns ~14.4 %/yr at −36 % drawdown over 1999–2026 — the strongest single
+filter we found, and the flagship of the earlier SMA study (`analysis/sma_study/`). Its
+one structural blind spot is the fast crash.
 
-The full-period edge comes from the **2000s "lost decade"**, when buy-and-hold *lost*
-money over ten years and the filter made money. In the relentless 2010s bull,
-buy-and-hold **won** on return. In the 2020s the Standard variant edges out
-buy-and-hold with less risk.
+### 2b. Momentum filter — CCI(40) −100/0 with a triangular-MA switch
 
-### 2b. By market regime — total return over the span / deepest drawdown within it
+The Commodity Channel Index (CCI) measures how far price sits from its recent mean. This
+filter is a hysteresis band on CCI(40) with a regime-dependent exit:
 
-| regime | span | buy & hold | Standard | Conservative |
+```
+  • Enter when CCI(40) rises above 0; exit when CCI(40) falls below -100 (a deep washout).
+  • BUT when the 200-day TRIANGULAR moving average is sloping down (a confirmed,
+    sustained downtrend) the exit tightens to CCI(40) < 0 — i.e. it falls back to the
+    reactive "CCI>0" rule that survives long grinding bears.
+  • No multi-day confirmation: act on the close (confirming exits only deepens drawdown).
+```
+
+`cci_band_tma_switch` in the toolkit. It reacts to momentum extremes, so it catches fast
+crashes the trend filter misses. The **triangular-MA switch is what fixes the momentum
+filter's old weakness** — a plain CCI band got chopped up in the 2000–02 dot-com grind
+(full-sample drawdown −66 %); gating the exit on the slow triangular-MA slope cuts that to
+−32 % while leaving the modern-era behavior essentially untouched. (Lineage: this evolved
+from a simpler CCI(50) −120/−40 band; the sweep/walk-forward studies are in `analysis/tests/`.)
+
+---
+
+## 3. Performance across time scales
+
+The blend's edge, like its components', is **concentrated in bear markets** — but because
+it diversifies two crash-response styles, its drawdown control is both deeper and more
+consistent than either filter alone.
+
+![either-on & avg vs buy & hold](results/blend_finalists.svg)
+
+### 3a. By regime — total return over the span / deepest drawdown within it
+
+| regime | span | buy & hold | avg (½) | either-on |
 |---|---|---:|---:|---:|
-| Dot-com crash | 2000–2002 | −83 % / −83 % | −25 % / −36 % | **−12 % / −36 %** |
-| Mid-2000s recovery | 2002–2007 | +166 % / −17 % | +72 % / −21 % | +56 % / −19 % |
-| Global financial crisis | 2007–2009 | −52 % / −54 % | −17 % / −24 % | **−16 % / −21 %** |
-| 2009–2020 bull | 2009–2020 | **+821 %** / −23 % | +434 % / −18 % | +346 % / −20 % |
-| COVID crash | Feb–Mar 2020 | −28 % / −29 % | −28 % / −29 % | −28 % / −29 % |
-| Post-COVID surge | 2020–2021 | +137 % / −13 % | +137 % / −13 % | +127 % / −13 % |
-| 2022 bear | 2021–2022 | −36 % / −36 % | −20 % / −20 % | **−13 % / −18 %** |
-| 2023–2026 recovery | 2022–2026 | +184 % / −23 % | +137 % / −23 % | +118 % / −23 % |
+| Dot-com crash | 2000–2002 | −83 % / −83 % | **−25 % / −33 %** | −29 % / −36 % |
+| Global financial crisis | 2007–2009 | −53 % / −54 % | **−25 % / −25 %** | −30 % / −32 % |
+| 2009–2020 bull | 2009–2020 | **+820 %** / −23 % | +397 % / −16 % | +537 % / −20 % |
+| COVID crash | Feb–Mar 2020 | −28 % / −29 % | **−20 % / −21 %** | −28 % / −29 % |
+| 2022 bear | 2021–2022 | −36 % / −36 % | **−14 % / −14 %** | −20 % / −20 % |
+| 2023–2026 recovery | 2022–2026 | +184 % / −23 % | +128 % / −15 % | +156 % / −23 % |
 
-Both shine in **every grinding bear** vs buy-and-hold. Note the Standard/Conservative
-trade-off: the Standard variant captures **more of the bull runs** (2009–2020: +434 %
-vs +346 %) but gives up a little crash protection in individual bears (dot-com −25 % vs
-−12 %; 2022 −20 % vs −13 %) because its faster re-entry occasionally catches a brief
-relief rally before the decline resumes. Their *worst-case* drawdown over the whole
-history is identical (−36 %). Neither dodges the **COVID crash** — a one-month plunge is
-too fast for a 200-day average to react.
+This is the structural fork between the two variants. **`avg` cushions every crash type,
+including fast ones** (COVID −21 %, 2022 −14 %), because whenever one filter is caught off
+guard the other has usually exited, so you're only half-exposed. **`either-on` keeps the
+trend filter's fast-crash blind spot** (COVID −29 %, same as buy-and-hold) — the price it
+pays for staying fully invested and out-returning everything else.
 
-### 2c. Return consistency by holding period — annualized: worst / median / best
+### 3b. Return consistency by holding period — annualized: worst / median / best
 
-| horizon | buy & hold | Standard | Conservative |
+| horizon | buy & hold | avg (½) | either-on |
 |---|---:|---:|---:|
-| 1 year | −65 / **+16** / +118 | −18 / +11 / +105 | −18 / +10 / +79 |
-| 3 years | −39 / +13 / +34 | −9 / +13 / +32 | **−4** / +12 / +29 |
-| 5 years | −20 / +14 / +28 | **−0 / +13 / +27** | −2 / +11 / +27 |
-| 10 years | −8 / +12 / +21 | **+5 / +12 / +21** | +4 / +11 / +20 |
+| 1 year | −65 / +16 / +118 | −17 / +12 / +96 | −19 / +13 / +118 |
+| 3 years | −39 / +13 / +34 | −8 / +12 / +31 | −10 / +13 / +34 |
+| 5 years | −20 / +14 / +28 | −0 / +12 / +26 | −1 / +13 / +28 |
+| 10 years | −8 / +12 / +21 | **+5** / +11 / +20 | **+5** / +13 / +22 |
 
-Read the **worst** column: buy-and-hold has had losing 1-, 3-, 5- and 10-year stretches.
-The Standard variant **never had a losing 5- or 10-year window** in 27 years (worst
-10-yr +5 %/yr) and its medians are close to buy-and-hold's — you give up a little median
-upside to eliminate the catastrophic tail.
+Read the **worst** column: buy-and-hold has had losing 1-, 3-, 5- and 10-year stretches;
+neither blend has had a losing 5- or 10-year window in 27 years, and `either-on`'s medians
+match or beat buy-and-hold's. You eliminate the catastrophic tail without surrendering the
+middle.
 
-### 2d. Short-horizon win-rate vs buy & hold (rolling windows: return % / drawdown %)
+### 3c. Win-rate vs buy & hold (rolling windows: return-beat % / shallower-drawdown %)
 
-| | 1 mo | 3 mo | 6 mo | 1 yr |
-|---|---:|---:|---:|---:|
-| **Standard** | **39**/75 | **42**/77 | **41**/74 | **37**/77 |
-| Conservative | 37/79 | 37/80 | 36/78 | 33/71 |
+| | 1 mo | 1 yr | 5 yr |
+|---|---:|---:|---:|
+| avg (½) | 39 / 82 | 31 / **90** | 54 / **99** |
+| either-on | 36 / 72 | 38 / 73 | **59** / 87 |
 
-The Standard variant's faster re-entry lifts its short-horizon return-win-rate above the
-Conservative rule's at every scale. Both still lose to buy-and-hold on raw return in
-most short windows — their dependable edge is drawdown reduction (shallower 74–80 % of
-the time), not beating B&H in a typical quarter.
+The dependable edge is **drawdown**: `avg` is shallower than buy-and-hold in ~99 % of
+rolling 3–5-year windows. On raw return both mostly trail buy-and-hold in short windows
+(the full-sample CAGR edge comes from side-stepping deep bears plus earning cash yield
+while out), but `either-on` pulls ahead on return at longer horizons (59 % of 5-yr windows).
 
 ---
 
-## 3. Robustness: walk-forward & out-of-sample
+## 4. Robustness: walk-forward & out-of-sample
 
-The full-sample numbers were chosen with hindsight, so we re-ran the study the way you'd
-actually trade it: a 22-strategy grid re-evaluated every year on a training window, the
-best traded the **next** year, OOS segments stitched together. The first OOS year is
-**2004**, so the dot-com crash — the filter's signature win — lands in *training*. A
-deliberately hard test. (`analysis/sma_study/walkforward.jl`.)
+The blends have **no free parameters** — each is a fixed combination of two filters whose
+own parameters were already walk-forward validated (the round numbers beat adaptive
+re-optimization, both for the SMA filter and the CCI band; see `analysis/sma_study/` and
+`analysis/tests/`). So the question for the blend is whether *committing* to it does as well
+out-of-sample as adaptively re-choosing among the building blocks each year.
 
 | OOS 2004–2026 | CAGR | maxDD | Calmar |
 |---|---:|---:|---:|
-| buy & hold | **14.7 %** | −54 % | 0.27 |
-| **Standard (fast re-entry)** | 14.1 % | **−29 %** | **0.49** |
-| Conservative (50/200) | 12.4 % | −29 % | 0.43 |
-| walk-forward (anchored) | 6.1 % | −16 % | 0.38 |
-| walk-forward (rolling 5y) | 8.1 % | −32 % | 0.25 |
+| buy & hold | 14.5 % | −54 % | 0.27 |
+| **either-on (fixed)** | **14.9 %** | −32 % | 0.47 |
+| avg (fixed) | 13.2 % | **−25 %** | **0.53** |
+| adaptive walk-forward (re-picks yearly) | 13.1 % | −29 % | 0.46 |
 
-Three findings, all of which **strengthen** confidence the rule isn't overfit:
+`analysis/blend_walkforward.jl`. Two findings, both of which **strengthen** confidence:
 
-1. **Out-of-sample the Standard variant nearly matches buy-and-hold's return (14.1 % vs
-   14.7 %) at roughly half the drawdown (−29 % vs −54 %)** — a far better risk-adjusted
-   ride. The Conservative variant trails on return but is equally smooth.
-2. **Adaptively re-optimizing the parameters does *worse* than a fixed rule.** If clever
-   in-sample tuning can't beat a round, fixed choice, the fixed choice isn't overfit —
-   trend-following works broadly and the exact lengths barely matter.
-3. **Chronological splits agree** — in-sample-"optimal" parameters generalize no better
-   than the round numbers.
-
-The Standard variant's parameters (50/200, re-enter above the 50-day, ~10-day hold) are
-robust: out-of-sample results barely move for re-entry lengths of 40–50 days and holds of
-5–21 days. (The deep-crash drawdown in the *full* sample is a touch more parameter-sensitive
-around the dot-com era — another reason the Conservative variant exists.)
+1. **Committing to a fixed blend beats adaptively re-selecting** among {B&H, trend, momentum,
+   avg, either-on} each year (Calmar 0.47 / 0.53 vs 0.46) — and the adaptive selector *only
+   ever picks a blend*, never a standalone. The combination isn't overfit.
+2. **Out-of-sample (dot-com in training), `either-on` still edges buy-and-hold on return**
+   (14.9 % vs 14.5 %) at ~half the drawdown — a far better risk-adjusted ride.
 
 ---
-
-## 4. The conservative variant — when to prefer it
-
-The classic 50/200 golden-cross filter is the Standard variant without the fast
-re-entry: it returns to QQQ only when SMA-50 climbs back above SMA-200. That makes it:
-
-- **Simpler and lower-maintenance** — ~1.3 trades/year vs ~5, and an unambiguous rule.
-- **Tighter on individual-bear protection** — −12 % through the dot-com crash and −13 %
-  in 2022 (vs the Standard variant's −25 % and −20 %), because it never re-enters into a
-  relief rally.
-- **Lower-returning** — 11.9 % vs 14.4 % CAGR; it gives up more of each recovery.
-
-Prefer it if you value the fewest possible trades, the cleanest rule, and the tightest
-drawdown control in a crash, and you're willing to leave some return on the table. The
-full-history equity/drawdown of the conservative rule vs buy-and-hold:
-
-![Conservative 50/200 vs buy & hold](results/sma_study/equity_curves.svg)
-
-### Last 10 years — relative performance
-
-![last 10 years relative performance](results/sma_study/recent_10yr.svg)
-
-The bottom panel shows each variant *relative to buy & hold* (above 100 % = cumulatively
-ahead). Both drift below in calm bull runs, then jump above during every selloff
-(late-2018, 2022, the 2025 dip); the Standard variant (red) stays ahead of the
-Conservative (blue) by getting back in sooner. Over the last decade the Standard variant
-slightly **beat** buy-and-hold on return with a shallower drawdown.
-
----
-
-## 4b. An alternative overlay — the CCI(50) −120/−40 momentum band
-
-A separate, **momentum-based** overlay that reduces drawdown without the moving-average
-machinery. It uses the 50-day Commodity Channel Index (CCI), a normalized measure of how
-far price sits from its recent mean:
-
-```
-CCI(50) band (hysteresis):
-  • Start invested. Sell to cash when CCI(50) falls below −120 (a deep washout).
-  • Stay in cash until CCI(50) climbs back above −40, then re-enter.
-  • The wide −120 / −40 band keeps it from re-entering into continued weakness.
-```
-
-It's a pure **risk-reducer**, not a return-booster, and it earns its keep the same way the
-SMA filter does — by side-stepping deep, grinding selloffs while earning cash yield out.
-Tested over 20 years split into two independent decades:
-
-| (QQQ, cash 4 %/yr, 5 bps/trade) | Prior decade ’06–’16 | Recent decade ’16–’26 | Full 20 yr |
-|---|---:|---:|---:|
-| CCI band CAGR / B&H CAGR | 10.7 % / 11.0 % | 19.2 % / 20.9 % | 14.9 % / 15.9 % |
-| **CCI band maxDD / B&H maxDD** | **−21 % / −54 %** | **−23 % / −36 %** | **−23 % / −54 %** |
-| CCI band Calmar / B&H Calmar | **0.50 / 0.21** | **0.85 / 0.59** | **0.65 / 0.30** |
-| Trades/yr | ~5 | ~5 | ~5 |
-
-The trade-off is identical in both halves: give up ~0.4–1.7 pp/yr of CAGR for **roughly half
-the drawdown and ~double the Calmar**. The drawdown control is strikingly stable — ~−22 % in
-every window regardless of regime.
-
-**Parameter robustness.** The two thresholds were swept independently. The **−40 re-entry was
-the CAGR peak even in the independent prior decade** (not just in the recent one it was first
-found on) — eager re-entry (buy < −60) whipsaws *and* deepens drawdown to ~−42 %; over-patient
-re-entry (buy > +40) bleeds return. The **−120 exit sits in a flat plateau** (−110 to −140 all
-behave similarly); the exit level is a low-leverage knob, the re-entry level is the one that
-matters. See `analysis/tests/cci_band_sweep.jl` (sell), `cci_band_buy_sweep.jl` (buy), and
-`cci_band_20yr.jl` (two-decade sensitivity).
-
-**Walk-forward (out-of-sample).** Re-selecting the band every year from a 25-band grid using
-*only past data* (first OOS year 2004, so the dot-com crash is in training) does **worse** than
-the fixed −120/−40: over OOS 2004–2026 the fixed rule returns **13.5 %/yr at −23 % drawdown
-(Calmar 0.59)** while the adaptive walk-forward manages 12.2 % at −27 % (Calmar 0.46), and B&H
-14.6 % at −54 %. The walk-forward consistently lands on −110/0 — one grid-step from −120/−40 —
-and in chronological train/test splits the fixed −120/−40 generalizes forward *better* than the
-in-sample-optimal band. As with the SMA filter, the fact that clever re-optimization can't beat
-the round fixed choice is evidence the choice isn't overfit. (`analysis/tests/cci_walkforward.jl`.)
-
-**The one blemish — the dot-com crash.** Over the *full* 1999–2026 sample its worst drawdown is
-**−66 %, not −22 %**. In the 2000–2002 grind, CCI's mean-reversion re-entries kept buying relief
-rallies before the next leg down, so it never fully stepped aside (full-sample Calmar 0.17, vs
-the SMA filter's 0.33). The clean ~−22 % drawdown is a **2004-onward property** — over its OOS
-life it's excellent, but it has not been stress-tested kindly by a prolonged saw-toothed bear.
-If dodging *that* kind of market is the priority, the SMA Conservative variant is the safer tool.
-
-**Where it stands today** (run `julia analysis/signal.jl`):
-
-```
-QQQ as of 2026-05-29:  close 738.31   CCI-50 123.70
-CCI(50) band -120/-40:  ▲ LONG  (re-entered 2026-04-08, after the early-2026 dip)
-```
-
-**SMA filter vs CCI band — which to use.** They're complementary, not competing:
-
-- The **SMA trend filter** (Standard/Conservative) reacts to the *long* trend; it's slower,
-  trades less, and over the full 1999–2026 sample out-returns B&H.
-- The **CCI band** reacts to *momentum extremes*; it cuts drawdown a touch harder and more
-  consistently across regimes, at slightly lower raw return. It does not out-return B&H over
-  rolling 20-yr windows — it's the smoother-ride option.
-
-Honest caveat: annualized it preserves ~93–96 % of B&H CAGR, but **compounded** that is ~76 %
-of terminal wealth over 10 yr and ~84 % over 20 yr — the cash drag and slightly-late re-entries
-cost real money over long holds. Choose it when a livable −22 % worst case (vs −54 %) matters
-more than the last point of return.
-
-## 4c. The adopted overlay — blending the trend and momentum filters
-
-The SMA fast-reentry filter and the CCI(40) momentum filter fail in *opposite* regimes
-(SMA is blind to fast crashes; CCI is weak in long grinding bears), so blending them
-diversifies the drawdowns. Two blends are the production candidates, both built from the
-same pair (`blend_components`):
-
-- **either-on** (`blend_either_on`) — long if EITHER filter is long. Highest return
-  (≈15% CAGR, 49× since 1999), **~3 trades/yr**, simple all-in/all-out. Keeps the SMA's
-  fast-crash blind spot (−29% in COVID). The low-effort, max-return pick.
-- **avg ½-size** (`blend_avg`) — exposure = (CCI + FR)/2 ∈ {0, ½, 1}. Smoothest ride,
-  cushions *every* crash type (−21% COVID), shallower than B&H in ~99% of rolling 3–5yr
-  windows. Costs ~12 trades/yr and fractional positions.
-
-**Validated OOS** (`analysis/blend_walkforward.jl`): committing to a fixed blend beats
-adaptively re-selecting among {B&H, CCI, FR, avg, either-on} each year (either-on Calmar
-0.47, avg 0.53 vs adaptive 0.46) — and the adaptive selector *only ever picks a blend*,
-never a standalone. Out-of-sample 2004+, either-on edges B&H on return (14.9% vs 14.5%) at
-~half the drawdown.
-
-**Live signal & execution guides:** `julia analysis/signal.jl` prints the current
-buy-hold / sell-wait call with the two-filter breakdown; the per-strategy webpages
-(`results/blend_either_on.html`, `results/blend_avg.html`, built by
-`analysis/build_blend_pages.jl`) carry the full assessment and how-to-execute. Side-by-side
-study: `analysis/blend_finalists_compare.jl` + chart `results/blend_finalists.svg`.
 
 ## 5. Why QQQ specifically
 
-We ran the same 50/200 filter on all eight ETFs in the dataset. The drawdown protection
-is **universal**; the return boost is **not** — it only *added* return on high-momentum,
-deep-crash assets (QQQ, energy, long bonds) and *hurt* choppier indices like small-caps
-(IWM −4.5 pp/yr) and the Dow (DIA −2.7 pp). QQQ is the standout equity beneficiary
-precisely because it trends hard and crashes hard, which is exactly what a trend filter
-exploits.
-
-We also tested using the other ETFs to **inform** QQQ timing (broad-market confirmation
-from SPY/DIA, small-cap breadth from IWM, risk-on/off vs bonds). All of them *reduced*
-return by adding conservatism — QQQ's own trend already encodes the regime. Don't
-over-engineer it. (`analysis/sma_study/cross_asset_analysis.jl`.)
+We ran the underlying 50/200 filter on all eight ETFs in the dataset. The drawdown
+protection is **universal**; the return boost is **not** — it only *added* return on
+high-momentum, deep-crash assets (QQQ, energy, long bonds) and *hurt* choppier indices like
+small-caps (IWM −4.5 pp/yr) and the Dow (DIA −2.7 pp). QQQ is the standout equity beneficiary
+precisely because it trends hard and crashes hard — exactly what these filters exploit. Using
+*other* ETFs to confirm QQQ timing only reduced return; QQQ's own price already encodes the
+regime. (`analysis/sma_study/cross_asset_analysis.jl`.)
 
 ---
 
-## 6. How to execute (Standard variant)
+## 6. How to execute
 
 ### Inputs & routine
-You need only QQQ's **daily closing price**. After the close, update the 50- and 200-day
-moving averages (or run `julia analysis/signal.jl`) and apply the rule:
+You need QQQ's daily **OHLC** (the CCI uses high/low/close; everything else uses the close).
+After the close, update the two filters — or just run `julia analysis/signal.jl`, which
+prints the call and the breakdown — and apply your chosen blend rule:
 
-- **In cash and QQQ closes above its 50-day SMA →** buy QQQ (re-enter).
-- **Long and SMA-50 drops below SMA-200 (death cross) →** sell QQQ, move to cash.
-- After any switch, **wait ~10 trading days** before switching again.
+- **either-on:** be in QQQ unless *both* filters are out. Move to cash only when the trend
+  filter is in a death cross **and** the momentum filter has exited; re-enter when either
+  flips back in. Exits are rare (~3/yr) — checking a few times a week is plenty.
+- **avg:** set your QQQ weight to 0 / 50 / 100 % per how many filters are in. Changes
+  cluster around turns (~12/yr); check daily in volatile periods.
 
-Execute changes at the next session's open. The Standard variant averages ~5 trades/year
-but **clusters in choppy markets** (e.g. several round-trips in 2016 and 2022) and goes
-quiet for years in clean trends — checking daily (or every couple of days in volatile
-periods) is enough.
+Execute changes at the next session.
 
 ### Where to hold each state
-- **Long:** QQQ, or **QQQM** (same index, lower 0.15 % expense ratio).
-- **Cash:** a money-market fund, T-bills, or HYSA — **not** idle 0 % cash; the return
-  edge partly depends on earning ~4 % here (the drawdown protection does not). **Do not**
-  use leveraged ETFs (TQQQ): leverage amplifies whipsaw and breaks the risk profile.
+- **Long:** QQQ, or **QQQM** (same index, lower 0.15 % fee). **Do not** use leveraged ETFs
+  (TQQQ) — leverage amplifies whipsaw and breaks the risk profile.
+- **Cash:** a money-market fund, T-bills, or HYSA earning ~4 % — *not* idle 0 % cash; part of
+  the return edge depends on earning yield while out (the drawdown protection does not).
 
 ### Account & tax
-The Standard variant realizes ~5 taxable events/year, the Conservative ~1. **Use a
-tax-advantaged account** (IRA / Roth / 401k) so switches don't trigger capital-gains tax —
-this matters more for the Standard variant. In a taxable account, the Conservative variant's
-lower turnover is the safer choice.
+`either-on` realizes ~3 taxable events/year — quite tax-friendly. `avg` realizes ~12 plus
+fractional rebalances — **strongly prefer a tax-advantaged account** (IRA / Roth / 401k) for
+it. If you must run in a taxable account, `either-on` is the cleaner choice.
 
-### Discipline — the hard part
-Follow the rule **mechanically**. The two difficult moments: **selling after a death
-cross** when the market still feels fine, and **re-buying** when sentiment is still fearful
-and price has already bounced. The Standard variant's faster re-entry means you'll
-occasionally buy back in just before a second leg down — accept the rule's small whipsaws;
-they're the price of catching real recoveries early.
+### Discipline & when it disappoints
+Follow the rule **mechanically**; the hard moments are selling while the market still feels
+fine and re-buying while it still feels scary. Expect to **trail buy-and-hold in sustained
+bulls** (the 2010s) until the next deep bear, which is when the overlay earns its keep. And
+know the variants' blind spots: **`either-on` will ride a fast crash down** (COVID −29 %) —
+if a sudden plunge is your main fear, use `avg`, which cushions it (−21 %).
 
-### When it will disappoint you
-- **Sudden crashes** (COVID-style): a 200-day average can't react in days.
-- **Choppy, sideways markets** (2015–16): expect a cluster of whipsaw trades.
-- **Sustained bull markets** (the 2010s): you'll trail buy-and-hold until the next deep
-  bear, which is when the strategy earns its keep.
+The per-strategy webpages — `results/blend_either_on.html` and `results/blend_avg.html`
+(built by `analysis/build_blend_pages.jl`) — carry the full assessment and a live signal card.
 
 ---
 
 ## 7. Reproduce / monitor
 
 ```bash
-export PATH="$HOME/.juliaup/bin:$PATH"      # julia lives in ~/.juliaup/bin
-# ── production (the two blend cases) — analysis/ root ──
-julia analysis/signal.jl                       # today's buy-hold/sell-wait call (the blend + breakdown)
-julia analysis/build_blend_pages.jl            # §4c per-strategy webpages (either-on / avg)
-julia analysis/blend_finalists_compare.jl      # §4c side-by-side battery (either-on vs avg)
-julia analysis/blend_walkforward.jl            # §4c blend OOS validation
-# ── original SMA-flagship study — analysis/sma_study/ ──
-julia analysis/sma_study/run_analysis.jl       # full strategy sweep + ranking + robustness
-julia analysis/sma_study/walkforward.jl        # §3 walk-forward / OOS tests (SMA grid)
-julia analysis/sma_study/report.jl             # per-year / per-decade / per-regime tables
-julia analysis/sma_study/cross_asset_analysis.jl  # §5 cross-asset study
-julia analysis/sma_study/plot_hybrid.jl        # the §2 three-way chart
-julia analysis/sma_study/plot_recent.jl        # the §4 last-10-year relative-performance chart
-julia analysis/sma_study/build_report.jl       # the standalone HTML version of this document
-# ── exploratory CCI/band sensitivity — analysis/tests/ ──
-julia analysis/tests/cci_walkforward.jl        # §4b walk-forward / OOS tests (CCI band grid)
-julia analysis/tests/cci_band_20yr.jl          # §4b two-decade sensitivity (sell & buy sweeps)
+export PATH="$HOME/.juliaup/bin:$PATH"          # julia lives in ~/.juliaup/bin
+# ── production: the adopted blend (analysis/ root) ──
+julia analysis/signal.jl                        # today's buy-hold/sell-wait call + filter breakdown
+julia analysis/fetch_data.jl                    # refresh data/ from a free source (last 10 trading days)
+julia analysis/blend_finalists_compare.jl       # the full side-by-side battery (either-on vs avg vs B&H)
+julia analysis/blend_walkforward.jl             # §4 out-of-sample validation
+julia analysis/build_blend_pages.jl             # the per-strategy execution webpages
+julia analysis/plot_blend_finalists.jl          # the §3 equity + drawdown chart
+# ── component studies ──
+julia analysis/sma_study/run_analysis.jl        # the SMA trend-filter study (sweep / rank / walk-forward)
+julia analysis/tests/cci_tma_robustness.jl      # the momentum filter's lb / TMA-period sensitivity
+julia analysis/tests/cci_tma_walkforward.jl     # the momentum filter's out-of-sample test
 ```
 
 ---
 
-*This is a historical backtest of mechanical rules on one index — not investment advice
-or a prediction. Past performance does not guarantee future results; QQQ's defining
-feature, concentration in a handful of large-cap tech names, cuts both ways. The story is
-dominated by the 2000s, and results depend on the cost/cash assumptions above.*
+*This is a historical backtest of mechanical rules on one index — not investment advice or
+a prediction. Past performance does not guarantee future results; QQQ's defining feature,
+concentration in a handful of large-cap tech names, cuts both ways. The story is dominated by
+the 2000s, and results depend on the cost/cash assumptions above.*

@@ -91,13 +91,15 @@ Do **not** rasterize wide SVGs with macOS `qlmanage` (it square-crops and chops 
 
 ## Headline result
 
-The shipped strategy is a 50/200 SMA trend filter with two variants (see
-[STRATEGY.md](STRATEGY.md)): the **Standard (fast re-entry)** central strategy and the
-**Conservative (classic 50/200)** alternative. The 50/200 golden cross emerged from the
-sweep below as the best return-per-drawdown rule that significantly beat B&H; the
-walk-forward study then showed adding *fast re-entry* (re-enter when price reclaims the
-50-day SMA, with a ~10-day minimum hold to avoid whipsaw) raises return at the same
-drawdown — so it became the Standard variant.
+This study's flagship is a 50/200 SMA trend filter in two variants — **Standard (fast
+re-entry)** and **Conservative (classic 50/200)**. It is now the **trend component** of
+the adopted production strategy, the *either-on blend* (this trend filter combined with a
+CCI(40)/TMA momentum filter that covers the fast crashes the SMA misses) — see
+**[STRATEGY.md](STRATEGY.md)** for the blend, which is what `signal.jl` reports. The 50/200
+golden cross emerged from the sweep below as the best return-per-drawdown rule that
+significantly beat B&H; the walk-forward study then showed adding *fast re-entry* (re-enter
+when price reclaims the 50-day SMA, ~10-day minimum hold) raises return at the same drawdown
+— so it became the Standard variant.
 
 | 1999–2026 | Standard (fast re-entry) | Conservative (50/200) | buy & hold |
 |---|---:|---:|---:|
@@ -141,8 +143,8 @@ daily price/indicator technicals.
 
 ### An alternative overlay: the CCI(50) −120/−40 momentum band
 
-A separate, momentum-based risk-reducer (sell when CCI(50) < −120, re-enter when CCI(50) > −40)
-that's documented in full in **[STRATEGY.md §4b](STRATEGY.md)**. Over 2006–2026 — split into two
+A separate, momentum-based risk-reducer (sell when CCI(50) < −120, re-enter when CCI(50) > −40) —
+the **precursor to the blend's momentum filter** ([STRATEGY.md §2b](STRATEGY.md)). Over 2006–2026 — split into two
 independent decades — it cuts max drawdown to ~−22 % (vs B&H's −36 %/−54 %) and roughly doubles
 Calmar in both halves, at ~0.4–1.7 pp/yr less CAGR. Its walk-forward (`cci_walkforward.jl`)
 mirrors the SMA finding: the fixed band beats adaptive re-optimization out-of-sample (Calmar
@@ -168,7 +170,7 @@ not a better dot-com hedge.
 - `signal.jl` — **the day-to-day tool**: current buy-hold/sell-wait call for the adopted either-on blend + filter breakdown
 - `fetch_data.jl` — pull recent daily OHLCV from a free public source (Yahoo, via stdlib `Downloads`) into `data/`; no API key or data-service site
 - `build_blend_pages.jl` — self-contained execution webpages (`results/blend_either_on.html`, `results/blend_avg.html`)
-- `blend_finalists_compare.jl` / `blend_walkforward.jl` — side-by-side battery and OOS validation (STRATEGY.md §4c)
+- `blend_finalists_compare.jl` / `blend_walkforward.jl` — side-by-side battery and OOS validation (STRATEGY.md §3–4)
 - `plot_blend_finalists.jl` — equity + drawdown chart (`results/blend_finalists.svg`)
 
 **`sma_study/` — the original SMA-flagship study**
