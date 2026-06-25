@@ -27,7 +27,8 @@
       if (!isFinite(c)) continue;
       var v = parseFloat(String(f[5]).replace(/,/g, ''));  // strip thousands separators
       rows.push({ date: d, o: parseFloat(f[1]), h: parseFloat(f[2]),
-                  l: parseFloat(f[3]), c: c, v: isFinite(v) ? v : 0 });
+                  l: parseFloat(f[3]), c: c, v: isFinite(v) ? v : 0,
+                  partial: (f.length >= 7 && f[6] === 'P') });   // 7th col = mid-session/provisional bar
     }
     return rows;
   }
@@ -186,6 +187,7 @@
     var bear = (i >= lb) && !isNaN(a.t200[i]) && !isNaN(a.t200[i - lb]) && (a.t200[i] < a.t200[i - lb]);
     return {
       index: i, rows: a.rows.length, isLatest: i === a.rows.length - 1,
+      provisional: !!(a.rows[i] && a.rows[i].partial),
       firstDate: a.date[0], asOf: a.date[i], close: a.close[i],
       sma50: a.s50[i], sma200: a.s200[i], cci40: a.c40[i], tmaDown: bear, momExit: bear ? 0 : -100,
       trendIn: a.tr[i] === 1, trendSince: a.date[lastChangeUpTo(a.tr, i)],

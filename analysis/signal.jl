@@ -35,6 +35,9 @@ function show_signal(ticker; fetch::Bool=true)
 
     d = load_ticker(ticker; dir=DATADIR)
     n = length(d)
+    prov = archive_provisional(ticker; dir=DATADIR)
+    provnote = (prov !== nothing && prov == d.date[n]) ?
+        "  ⚠ PROVISIONAL (mid-session — replaced by the final bar on the next run after close)" : ""
     s50 = sma(d.close, 50); s200 = sma(d.close, 200)
     c40 = cci(d.high, d.low, d.close, 40); t200 = tma(d.close, 200)
     mom, trend = blend_components(d)            # (CCI40 TMA-trigger, SMA fast-reentry)
@@ -44,7 +47,7 @@ function show_signal(ticker; fetch::Bool=true)
     mom_exit = bear ? 0 : -100
 
     println("="^64)
-    @printf("%s  blend signal  —  as of %s\n", ticker, d.date[n])
+    @printf("%s  blend signal  —  as of %s%s\n", ticker, d.date[n], provnote)
     println("="^64)
     @printf("  close %.2f      SMA-50 %.0f %s SMA-200 %.0f      CCI(40) %.0f\n",
             d.close[n], s50[n], s50[n] > s200[n] ? ">" : "<", s200[n], c40[n])
@@ -73,7 +76,7 @@ function show_signal(ticker; fetch::Bool=true)
 
     if ticker == "QQQ" && isdir(WEBDIR)
         try
-            write_web_bundle(d; path=joinpath(WEBDIR, "data.js"))
+            write_web_bundle(d; path=joinpath(WEBDIR, "data.js"), provisional=prov)
             println("↻ refreshed web/data.js (open web/index.html for the same signal in a browser)")
         catch e
             @printf("⚠ could not refresh web bundle (%s)\n", sprint(showerror, e))

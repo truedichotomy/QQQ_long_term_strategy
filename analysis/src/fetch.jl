@@ -21,6 +21,17 @@ end
 Fetch up to the last `n` trading days of daily OHLCV for `ticker` from Yahoo Finance.
 Returns rows `(date, o, h, l, c, v)`. Throws on network/parse failure (caller can fall back).
 """
+# Is the regular session in progress right now? Then today's daily bar is still forming
+# (provisional). True iff regular.start ≤ regularMarketTime < regular.end — false on
+# weekends/holidays/after-hours, when the last trade time isn't inside an open session.
+function _market_open(json::AbstractString)
+    m1 = match(r"\"regularMarketTime\":(\d+)", json)
+    m2 = match(r"\"regular\":\{[^}]*?\"start\":(\d+),\"end\":(\d+)", json)
+    (m1 === nothing || m2 === nothing) && return false
+    t = parse(Int, m1.captures[1]); s = parse(Int, m2.captures[1]); e = parse(Int, m2.captures[2])
+    return s <= t < e
+end
+
 function fetch_ohlcv(ticker::AbstractString; n::Integer=10)
     range = n <= 55 ? "3mo" : n <= 115 ? "6mo" : n <= 230 ? "1y" : n <= 480 ? "2y" : n <= 1250 ? "5y" : "max"
     url = "https://query1.finance.yahoo.com/v8/finance/chart/$ticker?range=$range&interval=1d"
@@ -35,10 +46,12 @@ function fetch_ohlcv(ticker::AbstractString; n::Integer=10)
     for i in eachindex(ts)
         c = _pf(cl[i]); isnan(c) && continue                       # skip holiday / null bars
         push!(rows, (date = Date(unix2datetime(parse(Int, ts[i]))),
-                     o = _pf(op[i]), h = _pf(hi[i]), l = _pf(lo[i]), c = c, v = _pf(vo[i])))
+                     o = _pf(op[i]), h = _pf(hi[i]), l = _pf(lo[i]), c = c, v = _pf(vo[i]), p = false))
     end
     isempty(rows) && error("no usable rows parsed from Yahoo for $ticker")
-    return length(rows) > n ? rows[end - n + 1:end] : rows
+    out = length(rows) > n ? rows[end - n + 1:end] : rows
+    _market_open(json) && (out[end] = merge(out[end], (p = true,)))   # mark today's in-progress bar provisional
+    return out
 end
 
 # The accumulating local archive is one fixed-name file, `TICKER (local).csv`, in data/.
@@ -48,21 +61,32 @@ end
 # against the curated base. Committed, so the record is version-controlled and backed up.
 _archive_path(ticker, dir) = joinpath(dir, "$ticker (local).csv")
 
-"Write `rows` to the archive CSV for `ticker` (load_ticker format)."
+# The archive carries a 7th "Provisional" column ("P" = collected mid-session, still forming).
+# The loader trusts only the first 6 columns, so this flag never affects computed indicators —
+# it just marks the bar so the next fetch knows to overwrite it with the final session values.
 function _write_archive(ticker::AbstractString, rows; dir::AbstractString)
     path = _archive_path(ticker, dir)
     open(path, "w") do io
-        println(io, "\"Date\",\"Open\",\"High\",\"Low\",\"Close\",\"Volume\"")
+        println(io, "\"Date\",\"Open\",\"High\",\"Low\",\"Close\",\"Volume\",\"Provisional\"")
         for r in rows
-            @printf(io, "\"%sT00:00:00.000Z\",\"%.2f\",\"%.2f\",\"%.2f\",\"%.2f\",\"%d\"\n",
-                    r.date, r.o, r.h, r.l, r.c, isnan(r.v) ? 0 : round(Int, r.v))
+            @printf(io, "\"%sT00:00:00.000Z\",\"%.2f\",\"%.2f\",\"%.2f\",\"%.2f\",\"%d\",\"%s\"\n",
+                    r.date, r.o, r.h, r.l, r.c, isnan(r.v) ? 0 : round(Int, r.v), get(r, :p, false) ? "P" : "")
         end
     end
     return path
 end
 
-_read_archive_rows(path) = !isfile(path) ? NamedTuple[] :
-    (m = load_market(path); [(date=m.date[i], o=m.open[i], h=m.high[i], l=m.low[i], c=m.close[i], v=m.volume[i]) for i in 1:length(m)])
+function _read_archive_rows(path)
+    isfile(path) || return NamedTuple[]
+    lines = readlines(path); rows = NamedTuple[]
+    for k in 2:length(lines)                        # skip header
+        f = _fields(lines[k]); length(f) < 6 && continue
+        push!(rows, (date = Date(SubString(f[1], 1, 10)),
+                     o = _parsefloat(f[2]), h = _parsefloat(f[3]), l = _parsefloat(f[4]),
+                     c = _parsefloat(f[5]), v = _parsefloat(f[6]), p = (length(f) >= 7 && f[7] == "P")))
+    end
+    return rows
+end
 
 function _merge_rows_by_date(existing, incoming)        # incoming wins on duplicate dates
     byd = Dict{Date,Any}()
@@ -110,9 +134,16 @@ function append_to_archive(ticker::AbstractString, rows; dir::AbstractString)
     cutoff = _last_date_in_data(ticker, dir; exclude=path)     # latest date the curated/master files cover
     cutoff !== nothing && (merged = filter(r -> r.date > cutoff, merged))
     _write_archive(ticker, merged; dir=dir)
+    prov = (!isempty(merged) && get(merged[end], :p, false)) ? merged[end].date : nothing
     return (added = count(r -> !(r.date in before), merged), total = length(merged),
             first = isempty(merged) ? nothing : merged[1].date,
-            last  = isempty(merged) ? nothing : merged[end].date)
+            last  = isempty(merged) ? nothing : merged[end].date, provisional = prov)
+end
+
+"The date of the archive's last bar if it is provisional (mid-session), else `nothing`."
+function archive_provisional(ticker::AbstractString; dir::AbstractString)
+    rows = _read_archive_rows(_archive_path(ticker, dir))
+    (!isempty(rows) && get(rows[end], :p, false)) ? rows[end].date : nothing
 end
 
 """
@@ -132,15 +163,17 @@ end
 const _WEB_HEADER = "/* Bundled QQQ daily OHLCV (merged from data/) so the page shows a signal on open.\n" *
                     "   Generated — refresh with: julia analysis/fetch_data.jl (or node web/build_data.js). Do not hand-edit. */"
 
-"Regenerate the web app's bundled data file (`web/data.js`) from an already-loaded series."
-function write_web_bundle(d::MarketData; path::AbstractString)
+"Regenerate the web app's bundled data file (`web/data.js`) from an already-loaded series; the
+`provisional` date (if any) gets a 7th `,P` field so the page can flag it as a mid-session bar."
+function write_web_bundle(d::MarketData; path::AbstractString, provisional=nothing)
     open(path, "w") do io
         println(io, _WEB_HEADER)
         print(io, "window.QQQ_DATA=\"")
         for i in 1:length(d)
             i > 1 && print(io, "\\n")
-            @printf(io, "%s,%.2f,%.2f,%.2f,%.2f,%d",
-                    d.date[i], d.open[i], d.high[i], d.low[i], d.close[i], round(Int, d.volume[i]))
+            @printf(io, "%s,%.2f,%.2f,%.2f,%.2f,%d%s",
+                    d.date[i], d.open[i], d.high[i], d.low[i], d.close[i], round(Int, d.volume[i]),
+                    (provisional !== nothing && d.date[i] == provisional) ? ",P" : "")
         end
         println(io, "\";")
     end

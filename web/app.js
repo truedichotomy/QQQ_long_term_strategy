@@ -58,7 +58,7 @@
       ' · 200‑day triangular MA ' + (g.tmaDown ? 'falling' : 'rising');
     var rowsHtml = g.recent.map(function (x, i) {
       var hl = i === g.recent.length - 1;
-      return '<tr' + (hl ? ' class="today"' : '') + '><td>' + esc(x.date) + '</td><td>' +
+      return '<tr' + (hl ? ' class="today"' : '') + '><td>' + esc(x.date) + (x.partial ? ' <span class="prov">⚠</span>' : '') + '</td><td>' +
         r(x.o, 2) + '</td><td>' + r(x.h, 2) + '</td><td>' + r(x.l, 2) + '</td><td>' +
         r(x.c, 2) + '</td><td>' + rv(x.v) + '</td></tr>';
     }).join('');
@@ -66,7 +66,8 @@
       '<div class="signal ' + cls + '">' +
         '<div><span class="sigaction">' + action + '</span><span class="sigsub">' + sub + '</span></div>' +
         '<div class="sigasof">' + (g.isLatest ? 'live signal as of ' : 'historical signal as of ') +
-          '<b>' + esc(g.asOf) + '</b> · QQQ close ' + r(g.close, 2) + ' · CCI(40) ' + ri(g.cci40) + '</div>' +
+          '<b>' + esc(g.asOf) + '</b> · QQQ close ' + r(g.close, 2) + ' · CCI(40) ' + ri(g.cci40) +
+          (g.provisional ? ' <span class="prov">⚠ provisional (mid-session — not yet final)</span>' : '') + '</div>' +
         '<div class="brk">' +
           '<div class="brow"><span class="bn">Trend filter — SMA 50/200 fast‑reentry</span>' + chip(g.trendIn) +
             '<span class="bd">' + trendDetail + ' · since ' + esc(g.trendSince) + '</span></div>' +

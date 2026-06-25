@@ -15,6 +15,8 @@ Everything runs in your browser; nothing is uploaded.
    - An **"as of" date** next to the tabs computes the signal for any past trading day (handy
      for checking what the call was at, say, the 2008 bottom); **↻ latest** jumps back.
    - Both are deep-linkable and remembered: `index.html?blend=avg&asof=2008-11-20`.
+   - If the latest bar was pulled **mid-session** it's flagged **⚠ provisional** — it'll be
+     replaced by the final daily values the next time the data is refreshed after the close.
 2. **To update:** drop a newer QQQ CSV onto the "update" zone (or click to choose). New bars
    are **merged into a local database and deduplicated by date** (on an overlapping date the
    uploaded value wins). The merged database is **saved in your browser** (`localStorage`) and

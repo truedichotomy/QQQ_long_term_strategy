@@ -55,7 +55,9 @@ no stale values lingering. Each run fetches enough to bridge from the last store
 so the record stays gap-free even if you run only occasionally. `load_ticker` ranks a
 timestamp-less filename by the latest date it covers; with no curated file the archive is
 self-contained. Only the first 6 columns (Date, OHLC, Volume) are read and all indicators are
-recomputed from price. (Fetching mid-session captures a partial bar for today — run after close.)
+recomputed from price. A bar fetched **mid-session** is **marked provisional** (a 7th
+`Provisional` column in the archive, ignored by the trusted-6-columns rule) and overwritten with
+the final session values on the next run after the close — `signal.jl` and the web page flag it.
 
 ## Repo layout & other scripts
 

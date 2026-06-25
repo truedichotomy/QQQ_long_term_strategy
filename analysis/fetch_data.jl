@@ -32,12 +32,13 @@ rows = fetch_ohlcv(ticker; n=n)
 @printf("%-12s %10s %10s %10s %10s %14s\n", "Date", "Open", "High", "Low", "Close", "Volume")
 println("-"^72)
 for r in rows
-    @printf("%-12s %10.2f %10.2f %10.2f %10.2f %14d\n",
-            r.date, r.o, r.h, r.l, r.c, isnan(r.v) ? 0 : round(Int, r.v))
+    @printf("%-12s %10.2f %10.2f %10.2f %10.2f %14d%s\n",
+            r.date, r.o, r.h, r.l, r.c, isnan(r.v) ? 0 : round(Int, r.v),
+            get(r, :p, false) ? "  ⚠ provisional" : "")
 end
-if rows[end].date == today()
-    println("\nNote: the last row is today — it may be a partial/intraday bar if the market is still")
-    println("      open. Run after the close to capture the official daily OHLCV.")
+if get(rows[end], :p, false)
+    println("\nNote: the last row is PROVISIONAL (the market is open — a mid-session bar). It's marked")
+    println("      as such and replaced with the final session values on the next run after close.")
 end
 
 if save
@@ -46,7 +47,7 @@ if save
             st.total == 0 ? "empty (committed data already covers these dates)" :
             @sprintf("%d bar(s) beyond committed data (%s … %s), +%d new", st.total, st.first, st.last, st.added))
     if ticker == "QQQ" && isdir(WEBDIR)
-        write_web_bundle(load_ticker("QQQ"; dir=DATADIR); path=joinpath(WEBDIR, "data.js"))
+        write_web_bundle(load_ticker("QQQ"; dir=DATADIR); path=joinpath(WEBDIR, "data.js"), provisional=st.provisional)
         println("Refreshed web/data.js.")
     end
     println("Re-run the signal: julia analysis/signal.jl --no-fetch")
