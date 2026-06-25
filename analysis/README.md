@@ -46,11 +46,13 @@ julia analysis/fetch_data.jl SPY 20   # any ticker, last 20 days
 julia analysis/fetch_data.jl --no-save # just print, don't write
 ```
 
-The auto-pull writes one fixed **live-overlay** file in `data/` (git-ignored, overwritten each
-run) that `load_ticker` merges on top by date — overlap of any size, this pull wins. You can
-still drop a `QQQ (…).csv` export in by hand. Only the first 6 columns (Date, OHLC, Volume) are
-read and all indicators are recomputed from price. (Fetching mid-session captures a partial bar
-for today — run after the close for official daily values.)
+The auto-pull **accumulates** into one fixed **local-archive** file in `data/` (git-ignored;
+merged, not overwritten — so it grows into a continuous local record, since free Yahoo only
+reaches back so far) that `load_ticker` merges on top by date, this pull winning on overlap.
+Each run fetches enough to bridge from the last stored date to today, so the record stays
+gap-free even if you run only occasionally. You can still drop a `QQQ (…).csv` export in by
+hand. Only the first 6 columns (Date, OHLC, Volume) are read and all indicators are recomputed
+from price. (Fetching mid-session captures a partial bar for today — run after the close.)
 
 ## Repo layout & other scripts
 
@@ -198,7 +200,7 @@ execution: **[STRATEGY.md](STRATEGY.md)**; it's what `signal.jl` reports.
 - `engine.jl` — causal long/flat backtester · `metrics.jl` — CAGR, Sharpe, Sortino, maxDD, Calmar
 - `strategies.jl` — strategy library: trend filters, the CCI band/TMA-switch (`cci_band_tma_switch`), and the blends (`blend_either_on`, `blend_avg`, `blend_components`)
 - `crossasset.jl` — align other ETFs to QQQ + cross-asset signals · `evaluate.jl` — rolling multi-timescale + `walk_forward`
-- `fetch.jl` — pull recent OHLCV from Yahoo (`fetch_ohlcv`/`update_data`), write the live overlay, and regenerate the web bundle (`write_web_bundle`)
+- `fetch.jl` — pull recent OHLCV from Yahoo (`fetch_ohlcv`/`update_data`), accumulate into the persistent local archive (`append_to_archive`), and regenerate the web bundle (`write_web_bundle`)
 
 **`analysis/` (root) — production: the two blend cases**
 - `signal.jl` — **the day-to-day tool**: auto-pulls the latest data, then prints the buy-hold/sell-wait call for the adopted either-on blend + filter breakdown (and refreshes `web/data.js`)

@@ -24,10 +24,11 @@ last_change(s) = (lc = 1; for i in 2:length(s); s[i] != s[i-1] && (lc = i); end;
 function show_signal(ticker; fetch::Bool=true)
     if fetch
         try
-            rows = update_data(ticker; dir=DATADIR, n=10)
-            @printf("↻ pulled %d recent bars from Yahoo (latest %s) and merged into data/\n", length(rows), rows[end].date)
+            st = update_data(ticker; dir=DATADIR)
+            @printf("↻ updated local price archive from Yahoo: %d bars (%s … %s), +%d new this run\n",
+                    st.total, st.first, st.last, st.added)
         catch e
-            @printf("⚠ could not fetch latest data (%s) — using existing data in data/\n", sprint(showerror, e))
+            @printf("⚠ could not fetch latest data (%s) — using existing local data\n", sprint(showerror, e))
         end
     end
 

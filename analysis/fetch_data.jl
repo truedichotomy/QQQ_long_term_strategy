@@ -41,8 +41,8 @@ if rows[end].date == today()
 end
 
 if save
-    path = write_live_overlay(ticker, rows; dir=DATADIR)
-    @printf("\nMerged into data/ as the live overlay → %s\n", basename(path))
+    st = append_to_archive(ticker, rows; dir=DATADIR)
+    @printf("\nMerged into the local archive — now %d bars (%s … %s), +%d new\n", st.total, st.first, st.last, st.added)
     if ticker == "QQQ" && isdir(WEBDIR)
         write_web_bundle(load_ticker("QQQ"; dir=DATADIR); path=joinpath(WEBDIR, "data.js"))
         println("Refreshed web/data.js.")

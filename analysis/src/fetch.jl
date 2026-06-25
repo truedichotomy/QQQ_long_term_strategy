@@ -22,7 +22,7 @@ Fetch up to the last `n` trading days of daily OHLCV for `ticker` from Yahoo Fin
 Returns rows `(date, o, h, l, c, v)`. Throws on network/parse failure (caller can fall back).
 """
 function fetch_ohlcv(ticker::AbstractString; n::Integer=10)
-    range = n <= 55 ? "3mo" : n <= 115 ? "6mo" : n <= 230 ? "1y" : "2y"
+    range = n <= 55 ? "3mo" : n <= 115 ? "6mo" : n <= 230 ? "1y" : n <= 480 ? "2y" : n <= 1250 ? "5y" : "max"
     url = "https://query1.finance.yahoo.com/v8/finance/chart/$ticker?range=$range&interval=1d"
     io = IOBuffer()
     Downloads.download(url, io; headers = ["User-Agent" => _YAHOO_UA], timeout = 30)
@@ -41,14 +41,16 @@ function fetch_ohlcv(ticker::AbstractString; n::Integer=10)
     return length(rows) > n ? rows[end - n + 1:end] : rows
 end
 
-# The auto-pulled "live overlay" uses one FIXED filename whose end-timestamp is the maximal
-# sentinel (all 9s), so in load_ticker it always wins date-overlap dedupe and never
-# proliferates — it is overwritten in place on each run. The curated history files are the base.
-_live_path(ticker, dir) = joinpath(dir, "$ticker (99999999999999999 _ 00000000000000000).csv")
+# The accumulating local archive is one FIXED-name file whose end-timestamp is the maximal
+# sentinel (all 9s), so in load_ticker it always wins date-overlap dedupe. It is NOT
+# overwritten with only the latest fetch — fetched bars are MERGED into it, so over time it
+# becomes a continuous, growing record (independent of how far back Yahoo currently reaches).
+# Git-ignored: it's your local price history; the committed files are the shared base.
+_archive_path(ticker, dir) = joinpath(dir, "$ticker (99999999999999999 _ 00000000000000000).csv")
 
-"Write fetched `rows` as the canonical live-overlay CSV (load_ticker format) for `ticker`."
-function write_live_overlay(ticker::AbstractString, rows; dir::AbstractString)
-    path = _live_path(ticker, dir)
+"Write `rows` to the archive CSV for `ticker` (load_ticker format)."
+function _write_archive(ticker::AbstractString, rows; dir::AbstractString)
+    path = _archive_path(ticker, dir)
     open(path, "w") do io
         println(io, "\"Date\",\"Open\",\"High\",\"Low\",\"Close\",\"Volume\"")
         for r in rows
@@ -59,16 +61,58 @@ function write_live_overlay(ticker::AbstractString, rows; dir::AbstractString)
     return path
 end
 
-"""
-    update_data(ticker; dir, n=10) -> rows
+_read_archive_rows(path) = !isfile(path) ? NamedTuple[] :
+    (m = load_market(path); [(date=m.date[i], o=m.open[i], h=m.high[i], l=m.low[i], c=m.close[i], v=m.volume[i]) for i in 1:length(m)])
 
-Fetch the latest `n` bars for `ticker` and write them as the live overlay in `dir`, so the next
-`load_ticker(ticker)` merges them in (dedup by date, this pull wins). Returns the fetched rows.
+function _merge_rows_by_date(existing, incoming)        # incoming wins on duplicate dates
+    byd = Dict{Date,Any}()
+    for r in existing;  byd[r.date] = r; end
+    for r in incoming;  byd[r.date] = r; end
+    return [byd[d] for d in sort(collect(keys(byd)))]
+end
+
+"Read the latest date present in any of `ticker`'s data files (to size a gap-bridging fetch)."
+function _last_date_in_data(ticker, dir)
+    files = try find_data_files(ticker; dir=dir) catch; String[] end
+    last = nothing
+    for f in files
+        lines = readlines(f)
+        for i in length(lines):-1:1
+            mm = match(r"(\d{4}-\d{2}-\d{2})", lines[i])
+            if mm !== nothing
+                d = Date(mm.captures[1]); (last === nothing || d > last) && (last = d); break
+            end
+        end
+    end
+    return last
+end
+
 """
-function update_data(ticker::AbstractString; dir::AbstractString, n::Integer=10)
-    rows = fetch_ohlcv(ticker; n = n)
-    write_live_overlay(ticker, rows; dir = dir)
-    return rows
+    append_to_archive(ticker, rows; dir) -> (added, total, first, last)
+
+Merge `rows` into the persistent local archive for `ticker` (accumulates across runs; dedup by
+date, new rows win on overlap). Returns counts and the archive's date span.
+"""
+function append_to_archive(ticker::AbstractString, rows; dir::AbstractString)
+    existing = _read_archive_rows(_archive_path(ticker, dir))
+    merged = _merge_rows_by_date(existing, rows)
+    _write_archive(ticker, merged; dir=dir)
+    return (added = length(merged) - length(existing), total = length(merged),
+            first = merged[1].date, last = merged[end].date)
+end
+
+"""
+    update_data(ticker; dir, min_days=15) -> (added, total, first, last)
+
+Fetch enough recent bars from Yahoo to bridge from the local data's last date to today (so the
+record stays gap-free even if you run only occasionally), and merge them into the persistent
+local archive. Returns the archive stats.
+"""
+function update_data(ticker::AbstractString; dir::AbstractString, min_days::Integer=15)
+    last = _last_date_in_data(ticker, dir)
+    n = last === nothing ? 1250 : max(min_days, Dates.value(today() - last) + 5)
+    rows = fetch_ohlcv(ticker; n=n)
+    return append_to_archive(ticker, rows; dir=dir)
 end
 
 const _WEB_HEADER = "/* Bundled QQQ daily OHLCV (merged from data/) so the page shows a signal on open.\n" *
