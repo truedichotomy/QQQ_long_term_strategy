@@ -39,7 +39,7 @@
     if (m) return m[1];
     var mx = '';
     for (var i = 0; i < rows.length; i++) if (rows[i].date > mx) mx = rows[i].date;
-    return mx.replace(/-/g, '') + '000000000';
+    return mx.replace(/-/g, '') + '999999999';   // name without a timestamp (e.g. QQQ (local).csv) ranks by latest date, winning ties
   }
 
   // Merge one or more files by date (mirrors load_ticker/merge_markets): overlap of any

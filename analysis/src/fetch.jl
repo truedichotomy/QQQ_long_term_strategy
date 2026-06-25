@@ -41,12 +41,12 @@ function fetch_ohlcv(ticker::AbstractString; n::Integer=10)
     return length(rows) > n ? rows[end - n + 1:end] : rows
 end
 
-# The accumulating local archive is one FIXED-name file whose end-timestamp is the maximal
-# sentinel (all 9s), so in load_ticker it always wins date-overlap dedupe. It is NOT
-# overwritten with only the latest fetch — fetched bars are MERGED into it, so over time it
-# becomes a continuous, growing record (independent of how far back Yahoo currently reaches).
-# Git-ignored: it's your local price history; the committed files are the shared base.
-_archive_path(ticker, dir) = joinpath(dir, "$ticker (99999999999999999 _ 00000000000000000).csv")
+# The accumulating local archive is one fixed-name file, `TICKER (local).csv`, in data/.
+# It is NOT overwritten with only the latest fetch — fetched bars are MERGED into it, so over
+# time it becomes a continuous, growing record (independent of how far back Yahoo currently
+# reaches). `load_ticker` ranks it by the latest date it covers, so it wins date-overlap dedupe
+# against the curated base. Committed, so the record is version-controlled and backed up.
+_archive_path(ticker, dir) = joinpath(dir, "$ticker (local).csv")
 
 "Write `rows` to the archive CSV for `ticker` (load_ticker format)."
 function _write_archive(ticker::AbstractString, rows; dir::AbstractString)

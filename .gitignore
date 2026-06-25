@@ -1,5 +1,2 @@
 
 .DS_Store
-
-# accumulating local price archive (git-ignored; merged & grown by signal.jl/fetch_data.jl)
-data/*99999999999999999*

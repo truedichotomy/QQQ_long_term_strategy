@@ -46,13 +46,14 @@ julia analysis/fetch_data.jl SPY 20   # any ticker, last 20 days
 julia analysis/fetch_data.jl --no-save # just print, don't write
 ```
 
-The auto-pull **accumulates** into one fixed **local-archive** file in `data/` (git-ignored;
-merged, not overwritten — so it grows into a continuous local record, since free Yahoo only
-reaches back so far) that `load_ticker` merges on top by date, this pull winning on overlap.
-Each run fetches enough to bridge from the last stored date to today, so the record stays
-gap-free even if you run only occasionally. You can still drop a `QQQ (…).csv` export in by
-hand. Only the first 6 columns (Date, OHLC, Volume) are read and all indicators are recomputed
-from price. (Fetching mid-session captures a partial bar for today — run after the close.)
+The auto-pull **accumulates** into a **committed** local archive, **`data/QQQ (local).csv`**
+(merged, not overwritten — so it grows into a continuous, version-controlled record, since
+free Yahoo only reaches back so far). `load_ticker` merges it on top by date, the archive
+winning on overlap (a timestamp-less filename is ranked by the latest date it covers). Each
+run fetches enough to bridge from the last stored date to today, so the record stays gap-free
+even if you run only occasionally. You can still drop a `QQQ (…).csv` export in by hand. Only
+the first 6 columns (Date, OHLC, Volume) are read and all indicators are recomputed from
+price. (Fetching mid-session captures a partial bar for today — run after the close.)
 
 ## Repo layout & other scripts
 

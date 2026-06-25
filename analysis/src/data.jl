@@ -82,7 +82,15 @@ end
 function load_ticker(ticker::AbstractString; dir::AbstractString="data")
     files = find_data_files(ticker; dir=dir)
     length(files) == 1 && return load_market(files[1]; ticker=ticker)
-    return merge_markets([(load_market(f; ticker=ticker), _file_endts(f)) for f in files])
+    parts = map(files) do f
+        m = load_market(f; ticker=ticker)
+        ets = _file_endts(f)
+        # A file whose name has no timestamp (e.g. the live archive `QQQ (local).csv`) is
+        # ranked by the latest date it covers, with a high suffix so it wins same-date ties.
+        isempty(ets) && !isempty(m.date) && (ets = Dates.format(maximum(m.date), "yyyymmdd") * "999999999")
+        (m, ets)
+    end
+    return merge_markets(parts)
 end
 
 "Index range [i0, i1] covering dates in [from, to] (clamped to available data)."
