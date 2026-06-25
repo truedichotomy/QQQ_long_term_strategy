@@ -1,20 +1,37 @@
-# Print today's QQQ signal for the chosen overlay — the EITHER-ON blend of a
-# trend filter (50/200 SMA fast-reentry) and a momentum filter (CCI(40) -100/0
-# with a 200-day triangular-MA regime switch). Shows the breakdown of both
-# component filters and the resulting action (BUY/HOLD vs SELL/WAIT). The avg
-# (½-size) blend exposure is shown as the lower-risk alternative.
+# Print today's QQQ signal for the chosen overlay — the EITHER-ON blend of a trend filter
+# (50/200 SMA fast-reentry) and a momentum filter (CCI(40) -100/0 with a 200-day
+# triangular-MA regime switch). Shows the breakdown of both component filters and the
+# resulting action (BUY/HOLD vs SELL/WAIT). The avg (½-size) blend exposure is the
+# lower-risk alternative.
 #
-#   julia analysis/signal.jl          # QQQ
-#   julia analysis/signal.jl SPY      # any ticker present in ../data
+# On run it AUTO-PULLS the latest data from a free source (Yahoo) and merges it into data/,
+# so you never have to hunt down fresh data; pass --no-fetch to skip (offline). For QQQ it
+# also refreshes the web app's bundled data (web/data.js).
+#
+#   julia analysis/signal.jl              # QQQ: fetch latest → merge → signal (+ refresh web bundle)
+#   julia analysis/signal.jl SPY          # any ticker present in ../data
+#   julia analysis/signal.jl --no-fetch   # use existing data only
 
 include(joinpath(@__DIR__, "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf
 
+const DATADIR = joinpath(dirname(@__DIR__), "data")
+const WEBDIR  = joinpath(dirname(@__DIR__), "web")
+
 last_change(s) = (lc = 1; for i in 2:length(s); s[i] != s[i-1] && (lc = i); end; lc)
 
-function show_signal(ticker)
-    d = load_ticker(ticker; dir=joinpath(dirname(@__DIR__), "data"))
+function show_signal(ticker; fetch::Bool=true)
+    if fetch
+        try
+            rows = update_data(ticker; dir=DATADIR, n=10)
+            @printf("↻ pulled %d recent bars from Yahoo (latest %s) and merged into data/\n", length(rows), rows[end].date)
+        catch e
+            @printf("⚠ could not fetch latest data (%s) — using existing data in data/\n", sprint(showerror, e))
+        end
+    end
+
+    d = load_ticker(ticker; dir=DATADIR)
     n = length(d)
     s50 = sma(d.close, 50); s200 = sma(d.close, 200)
     c40 = cci(d.high, d.low, d.close, 40); t200 = tma(d.close, 200)
@@ -51,6 +68,18 @@ function show_signal(ticker)
     println("-"^64)
     println("  Rule: in QQQ unless BOTH the trend and momentum filters are OUT;")
     println("        re-enter as soon as EITHER turns back IN. ~3 trades/yr.")
+
+    if ticker == "QQQ" && isdir(WEBDIR)
+        try
+            write_web_bundle(d; path=joinpath(WEBDIR, "data.js"))
+            println("↻ refreshed web/data.js (open web/index.html for the same signal in a browser)")
+        catch e
+            @printf("⚠ could not refresh web bundle (%s)\n", sprint(showerror, e))
+        end
+    end
 end
 
-show_signal(isempty(ARGS) ? "QQQ" : uppercase(ARGS[1]))
+let nofetch = "--no-fetch" in ARGS,
+    tick = something(findfirst(a -> !startswith(a, "--"), ARGS), 0)
+    show_signal(tick == 0 ? "QQQ" : uppercase(ARGS[tick]); fetch = !nofetch)
+end

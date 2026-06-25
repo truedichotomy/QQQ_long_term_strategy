@@ -24,17 +24,21 @@ You can drop the file(s) from the project's `data/` folder, or a fresh export
 (`julia analysis/fetch_data.jl` writes one into `data/`). Multiple files dropped at once are
 merged together first (newest pull wins), then merged into the database.
 
-## Keeping the bundle current (maintainer)
+## Keeping the bundle current
 
-The bundled history lives in **`web/data.js`** (generated, not hand-edited). After updating
-the project's `data/` folder, regenerate it:
+The bundled history lives in **`web/data.js`** (generated, not hand-edited). It's refreshed
+**automatically every time you run `julia analysis/signal.jl`** (which also auto-pulls the
+latest data) or `analysis/fetch_data.jl`. So the usual way to update the page's default data is
+just to run the signal once, then reopen `index.html`. To rebuild it manually:
 
 ```bash
-node web/build_data.js     # rebuilds web/data.js from data/
+node web/build_data.js     # rebuilds web/data.js from data/ (byte-identical to the Julia writer)
 ```
 
-End users never need this — they just drop a file in the page. It's only to refresh the
-*default* bundled data shipped with the app.
+Why isn't the fetch done *in the page*? The free data source (Yahoo) doesn't send CORS
+headers, so a browser `fetch()` is blocked (especially from `file://`). The pull therefore
+lives server-side in `signal.jl`, and the page reads the bundle it produces (plus any files you
+drop in). End users never need to rebuild anything — they just run the signal, or drop a file.
 
 ## What's inside
 

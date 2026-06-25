@@ -20,6 +20,7 @@ include("src/metrics.jl")
 include("src/strategies.jl")
 include("src/crossasset.jl")
 include("src/evaluate.jl")
+include("src/fetch.jl")
 
 # data
 export MarketData, load_market, load_ticker, find_data_file, find_data_files, merge_markets, date_range, subset
@@ -40,5 +41,7 @@ export align_close, sma_aligned, momentum, above_own_sma, cross_own,
 # evaluation
 export HORIZONS, rolling_compare, multiscale,
        win_cagr, win_calmar, win_sharpe, walk_forward, equity_from_sr
+# data fetch / web bundle
+export fetch_ohlcv, write_live_overlay, update_data, write_web_bundle
 
 end # module

@@ -238,8 +238,8 @@ The per-strategy webpages — `results/blend_either_on.html` and `results/blend_
 ```bash
 export PATH="$HOME/.juliaup/bin:$PATH"          # julia lives in ~/.juliaup/bin
 # ── production: the adopted blend (analysis/ root) ──
-julia analysis/signal.jl                        # today's buy-hold/sell-wait call + filter breakdown
-julia analysis/fetch_data.jl                    # refresh data/ from a free source (last 10 trading days)
+julia analysis/signal.jl                        # today's call — auto-pulls latest data first, then the breakdown
+julia analysis/fetch_data.jl                    # explicit fetch from a free source (last 10 trading days)
 julia analysis/blend_finalists_compare.jl       # the full side-by-side battery (either-on vs avg vs B&H)
 julia analysis/blend_walkforward.jl             # §4 out-of-sample validation
 julia analysis/build_blend_pages.jl             # the per-strategy execution webpages

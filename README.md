@@ -17,22 +17,16 @@ export PATH="$HOME/.juliaup/bin:$PATH"     # Julia lives in ~/.juliaup/bin
 julia --startup-file=no analysis/signal.jl
 ```
 
-Prints the current **buy-hold / sell-wait** call with the two-filter breakdown.
+That one command **automatically pulls the latest QQQ data** from a free public source
+(Yahoo Finance — no API key, no data-service site), merges it into `data/`, prints the current
+**buy-hold / sell-wait** call with the two-filter breakdown, and refreshes the web app's
+bundled data. No data to hunt down. Add `--no-fetch` to run offline on the existing data.
 
-**No Julia?** Open **[web/index.html](web/index.html)** in any browser and drop your QQQ data
-file(s) onto it — the same signal, computed entirely client-side (HTML/CSS/JS, no server, no
-upload). See [web/README.md](web/README.md).
-
-To refresh the data first (no manual download, no data-service site), fetch the latest
-bars from a free public source and re-run:
-
-```bash
-julia --startup-file=no analysis/fetch_data.jl   # pull the last 10 trading days of QQQ → data/
-julia --startup-file=no analysis/signal.jl       # signal on the refreshed data
-```
-
-`fetch_data.jl` writes a CSV into `data/` that the loader merges by date automatically
-(newest pull wins on overlap). You can also drop in any `QQQ (…).csv` export by hand.
+**No Julia?** Open **[web/index.html](web/index.html)** in any browser — it shows the signal
+from the bundled history (refreshed whenever you run `signal.jl`), with tabs for either blend
+and an "as of" date for any past day. You can also drop a newer CSV on it to extend its own
+local database. The browser can't fetch the data source directly (CORS), which is why the
+auto-pull lives in `signal.jl`. See [web/README.md](web/README.md).
 
 ## Where things are
 
