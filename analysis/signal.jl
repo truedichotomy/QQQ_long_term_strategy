@@ -60,19 +60,30 @@ function show_signal(ticker; fetch::Bool=true)
             c40[n], mom_exit, bear ? "DOWN" : "UP", mom_exit)
     println("-"^64)
 
-    long = either[n] == 1
-    if long
-        @printf("  ► EITHER-ON  ▲ BUY / HOLD  —  100%% %s\n", ticker)
-        why = trend[n] == 1 && mom[n] == 1 ? "both filters IN" : "at least one filter IN"
-        @printf("     long because %s.  (in QQQ since %s)\n", why, d.date[last_change(either)])
+    println("  RECOMMENDATIONS  (the same two filters, combined two ways)")
+    if either[n] == 1
+        @printf("   ► Either-on   ▲ BUY / HOLD — 100%% %s         (max return, ~3 trades/yr)\n", ticker)
+        @printf("       %s; in QQQ since %s\n",
+                trend[n] == 1 && mom[n] == 1 ? "both filters IN" : "at least one filter IN",
+                d.date[last_change(either)])
     else
-        @printf("  ► EITHER-ON  ▼ SELL / WAIT  —  hold cash\n")
-        @printf("     flat because BOTH filters are OUT.  (in cash since %s)\n", d.date[last_change(either)])
+        @printf("   ► Either-on   ▼ SELL / WAIT — hold cash       (max return, ~3 trades/yr)\n")
+        @printf("       both filters OUT; in cash since %s\n", d.date[last_change(either)])
     end
-    @printf("  ► AVG (½-size alt.)  exposure now = %d%% %s\n", round(Int, 100avg[n]), ticker)
+    ex = round(Int, 100avg[n])
+    if ex >= 100
+        @printf("   ► Avg ½-size  ▲ HOLD — 100%% %s               (smoother ride, ~12 trades/yr)\n", ticker)
+        @printf("       both filters IN; at this exposure since %s\n", d.date[last_change(avg)])
+    elseif ex <= 0
+        @printf("   ► Avg ½-size  ▼ SELL / WAIT — hold cash       (smoother ride, ~12 trades/yr)\n")
+        @printf("       both filters OUT; at this exposure since %s\n", d.date[last_change(avg)])
+    else
+        @printf("   ► Avg ½-size  ◐ HALF — 50%% %s / 50%% cash     (smoother ride, ~12 trades/yr)\n", ticker)
+        @printf("       one filter IN, one OUT; at this exposure since %s\n", d.date[last_change(avg)])
+    end
     println("-"^64)
-    println("  Rule: in QQQ unless BOTH the trend and momentum filters are OUT;")
-    println("        re-enter as soon as EITHER turns back IN. ~3 trades/yr.")
+    println("  Either-on: in QQQ unless BOTH filters are OUT (re-enter when either turns IN).")
+    println("  Avg: hold the average of the two — 100% if both IN, 50% if one, cash if none.")
 
     if ticker == "QQQ" && isdir(WEBDIR)
         try
