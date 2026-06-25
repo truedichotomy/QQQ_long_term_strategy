@@ -118,7 +118,7 @@ function _last_date_in_data(ticker, dir; exclude=nothing)
 end
 
 """
-    append_to_archive(ticker, rows; dir) -> (added, total, first, last)
+    append_to_archive(ticker, rows; dir) -> (added, total, first, last, provisional, gap)
 
 Merge `rows` into the persistent local archive (dedup by date, new wins), then keep only the
 dates BEYOND what the committed/curated files already cover. So the archive is a clean
@@ -126,18 +126,34 @@ forward-extension: a fresh master file dropped into `data/` (ahead of the archiv
 supersedes it — the now-covered dates drop out of the archive automatically, with no gap (the
 master file provides them, independent of how far Yahoo can reach). If no curated file exists,
 nothing is pruned and the archive is self-contained. Returns counts and the archive's span.
+
+**Gap guard:** if the fetched window doesn't reach back to the existing data (more than a long
+weekend of daylight between the DB's last date and the earliest fetched bar), the database is
+too stale for this pull to bridge. The disconnected bars are NOT appended — that would punch a
+hole into the merged series and corrupt the long-window indicators — and `gap=(local_last,
+fetch_first)` is returned so the caller can warn the user to update the database manually.
 """
 function append_to_archive(ticker::AbstractString, rows; dir::AbstractString)
     path = _archive_path(ticker, dir)
-    before = Set(r.date for r in _read_archive_rows(path))
-    merged = _merge_rows_by_date(_read_archive_rows(path), rows)
+    existing = _read_archive_rows(path)
+    db_last = _last_date_in_data(ticker, dir)                  # newest date already in the DB (incl. archive)
+    fmin = isempty(rows) ? nothing : minimum(r.date for r in rows)
+    if db_last !== nothing && fmin !== nothing && Dates.value(fmin - db_last) > 4
+        return (added = 0, total = length(existing),
+                first = isempty(existing) ? nothing : existing[1].date,
+                last  = isempty(existing) ? nothing : existing[end].date,
+                provisional = (!isempty(existing) && get(existing[end], :p, false)) ? existing[end].date : nothing,
+                gap = (local_last = db_last, fetch_first = fmin))
+    end
+    before = Set(r.date for r in existing)
+    merged = _merge_rows_by_date(existing, rows)
     cutoff = _last_date_in_data(ticker, dir; exclude=path)     # latest date the curated/master files cover
     cutoff !== nothing && (merged = filter(r -> r.date > cutoff, merged))
     _write_archive(ticker, merged; dir=dir)
     prov = (!isempty(merged) && get(merged[end], :p, false)) ? merged[end].date : nothing
     return (added = count(r -> !(r.date in before), merged), total = length(merged),
             first = isempty(merged) ? nothing : merged[1].date,
-            last  = isempty(merged) ? nothing : merged[end].date, provisional = prov)
+            last  = isempty(merged) ? nothing : merged[end].date, provisional = prov, gap = nothing)
 end
 
 "The date of the archive's last bar if it is provisional (mid-session), else `nothing`."
@@ -147,15 +163,21 @@ function archive_provisional(ticker::AbstractString; dir::AbstractString)
 end
 
 """
-    update_data(ticker; dir, min_days=15) -> (added, total, first, last)
+    update_data(ticker; dir, min_days=15) -> (added, total, first, last, provisional, gap)
 
 Fetch enough recent bars from Yahoo to bridge from the local data's last date to today (so the
 record stays gap-free even if you run only occasionally), and merge them into the persistent
-local archive. Returns the archive stats.
+local archive. The fetch window is also extended to **re-pull any bars still marked provisional**
+(normally the latest one), so the merge replaces them with final session values — and is at least
+`min_days` long, so an update always refreshes roughly the last two weeks of available data.
+Returns the archive stats (including `gap`; see `append_to_archive`).
 """
 function update_data(ticker::AbstractString; dir::AbstractString, min_days::Integer=15)
     last = _last_date_in_data(ticker, dir)
-    n = last === nothing ? 1250 : max(min_days, Dates.value(today() - last) + 5)
+    provs = [r.date for r in _read_archive_rows(_archive_path(ticker, dir)) if get(r, :p, false)]
+    anchor = last                                              # reach back far enough to re-pull provisionals
+    isempty(provs) || (anchor = anchor === nothing ? minimum(provs) : min(anchor, minimum(provs)))
+    n = anchor === nothing ? 1250 : max(min_days, Dates.value(today() - anchor) + 5)
     rows = fetch_ohlcv(ticker; n=n)
     return append_to_archive(ticker, rows; dir=dir)
 end

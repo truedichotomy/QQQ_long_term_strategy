@@ -47,6 +47,15 @@ julia analysis/signal.jl --no-fetch   # offline: use existing data only
 (today's bar has barely formed); after noon it switches to today's in-progress (provisional)
 bar, the more useful reference for planning tomorrow's trade.
 
+**Provisional bars & finalization:** an update re-pulls roughly the last two weeks, so a bar that
+was captured mid-session gets replaced by its final session values. A run **right after the close
+finalizes the latest provisional bar even within the hour** — that one case bypasses the throttle,
+since the real close is now known. **Gap guard:** if the local data is so stale that the free Yahoo
+window can't bridge back to it, the disconnected bars are **not** appended (that would punch a hole
+into the series and distort the long-window indicators) — instead you get a **⚠ DATA GAP** warning
+telling you to drop a fresh full-history `QQQ (…).csv` into `data/`. `signal.jl` likewise warns if
+it finds a hole already sitting in the recent history.
+
 To fetch/inspect explicitly, or for another ticker, use `fetch_data.jl`:
 
 ```bash

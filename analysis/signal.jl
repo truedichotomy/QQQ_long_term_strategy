@@ -23,18 +23,31 @@ function show_signal(ticker; mode::Symbol=:auto)
     # ---- fetch decision ----
     # Pull from Yahoo only when worth it: throttle to ≤1×/hour, and (in :auto) fetch when the
     # market is OPEN *or* the local data is behind the most recent completed session — so a run
-    # after the close still catches up if we've missed a day or more. --fetch forces, --no-fetch skips.
+    # after the close still catches up if we've missed a day or more. One exception bypasses the
+    # hour throttle: right after the close, finalize a still-provisional bar (its real session
+    # close is now known) — a 60s floor just avoids hammering on rapid re-runs. --fetch forces,
+    # --no-fetch skips.
     age = archive_age(ticker; dir=DATADIR)
     d = load_ticker(ticker; dir=DATADIR)
     mkt_open = market_open_et()
     stale = d.date[end] < last_session_date()
-    do_fetch = mode == :force || (mode == :auto && age >= 3600 && (mkt_open || stale))
+    finalize = archive_provisional(ticker; dir=DATADIR) !== nothing && !mkt_open
+    do_fetch = mode == :force ||
+               (mode == :auto && ((age >= 3600 && (mkt_open || stale)) || (finalize && age >= 60)))
     if do_fetch
         try
             st = update_data(ticker; dir=DATADIR)
-            @printf("↻ fetched latest from Yahoo — local archive: %s\n",
-                    st.total == 0 ? "empty (committed data already current)" :
-                    @sprintf("%d bar(s) beyond committed data (%s … %s), +%d new", st.total, st.first, st.last, st.added))
+            if st.gap !== nothing
+                @printf("⚠ DATA GAP — local data ends %s, but the free Yahoo window only reaches back to %s\n",
+                        st.gap.local_last, st.gap.fetch_first)
+                @printf("   (~%d days unbridged). The database is too stale to update automatically; the\n",
+                        Dates.value(st.gap.fetch_first - st.gap.local_last))
+                println("   disconnected bars were NOT appended. Drop a fresh full-history QQQ CSV into data/ to repair.")
+            else
+                @printf("↻ fetched latest from Yahoo — local archive: %s\n",
+                        st.total == 0 ? "empty (committed data already current)" :
+                        @sprintf("%d bar(s) beyond committed data (%s … %s), +%d new", st.total, st.first, st.last, st.added))
+            end
             d = load_ticker(ticker; dir=DATADIR)        # reload to include the freshly fetched bars
         catch e
             @printf("⚠ could not fetch latest data (%s) — using existing local data\n", sprint(showerror, e))
@@ -47,6 +60,18 @@ function show_signal(ticker; mode::Symbol=:auto)
         @printf("• not fetching (%s%s) — using local data; pass --fetch to force a refresh\n", why, agestr)
     end
     n = length(d)
+
+    # ---- warn on any unbridged hole in the recent history (would distort the long-window
+    #      indicators that feed the signal); the fetch path above refuses to create one, so this
+    #      catches holes in curated files dropped into data/. ----
+    let lo = max(2, n - 220)
+        holes = [(d.date[i-1], d.date[i]) for i in lo:n if Dates.value(d.date[i] - d.date[i-1]) > 6]
+        isempty(holes) || begin
+            @printf("⚠ DATA GAP in recent history (%d hole%s, e.g. %s → %s) — indicators spanning it may be\n",
+                    length(holes), length(holes) == 1 ? "" : "s", holes[end][1], holes[end][2])
+            println("   off; drop a continuous QQQ file into data/ to repair.")
+        end
+    end
 
     # ---- actionable bar: before noon ET, act on the last completed session rather than
     #      today's still-forming (provisional) bar ----

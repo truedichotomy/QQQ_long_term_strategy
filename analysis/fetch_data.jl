@@ -43,14 +43,21 @@ end
 
 if save
     st = append_to_archive(ticker, rows; dir=DATADIR)
-    @printf("\nMerged into the local archive — %s\n",
-            st.total == 0 ? "empty (committed data already covers these dates)" :
-            @sprintf("%d bar(s) beyond committed data (%s … %s), +%d new", st.total, st.first, st.last, st.added))
-    if ticker == "QQQ" && isdir(WEBDIR)
-        write_web_bundle(load_ticker("QQQ"; dir=DATADIR); path=joinpath(WEBDIR, "data.js"), provisional=st.provisional)
-        println("Refreshed web/data.js.")
+    if st.gap !== nothing
+        @printf("\n⚠ DATA GAP — local data ends %s, but this pull only reaches back to %s (~%d days\n",
+                st.gap.local_last, st.gap.fetch_first, Dates.value(st.gap.fetch_first - st.gap.local_last))
+        println("   unbridged). Nothing was appended (it would punch a hole in the series). Fetch more days")
+        @printf("   (e.g. julia analysis/fetch_data.jl %s 60) or drop a fresh full-history CSV into data/.\n", ticker)
+    else
+        @printf("\nMerged into the local archive — %s\n",
+                st.total == 0 ? "empty (committed data already covers these dates)" :
+                @sprintf("%d bar(s) beyond committed data (%s … %s), +%d new", st.total, st.first, st.last, st.added))
+        if ticker == "QQQ" && isdir(WEBDIR)
+            write_web_bundle(load_ticker("QQQ"; dir=DATADIR); path=joinpath(WEBDIR, "data.js"), provisional=st.provisional)
+            println("Refreshed web/data.js.")
+        end
+        println("Re-run the signal: julia analysis/signal.jl --no-fetch")
     end
-    println("Re-run the signal: julia analysis/signal.jl --no-fetch")
 else
     println("\n(--no-save: nothing written to data/)")
 end
