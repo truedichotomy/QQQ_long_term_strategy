@@ -21,9 +21,10 @@ That one command **pulls the latest QQQ data when it's worth it** from a free pu
 (Yahoo Finance — no API key, no data-service site), merges it into `data/`, prints the current
 **buy-hold / sell-wait** call for **both blends** with the two-filter breakdown, and refreshes the
 web app's bundled data. No data to hunt down. To spare the free API the pull is **throttled** — it
-only happens if the local data is over an hour old *and* the US market is open (when closed, the
-stored last close is already final). Add `--fetch` to force a refresh, or `--no-fetch` to run
-offline. Before noon ET the call is read off the last completed session; after noon it uses today's
+only happens when the local data is over an hour old *and* either the US market is open or the local
+data has fallen behind the most recent completed session (an idle closed market whose last close you
+already hold needs no pull, but a run after a few days away still catches up). Add `--fetch` to force
+a refresh, or `--no-fetch` to run offline. Before noon ET the call is read off the last completed session; after noon it uses today's
 still-forming bar, to plan tomorrow's trade.
 
 **No Julia?** Open **[web/index.html](web/index.html)** in any browser — it shows the signal

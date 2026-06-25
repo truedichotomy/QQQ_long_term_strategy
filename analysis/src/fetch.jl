@@ -186,6 +186,20 @@ end
 archive_age(ticker::AbstractString; dir::AbstractString) =
     (p = _archive_path(ticker, dir); isfile(p) ? time() - mtime(p) : Inf)
 
+# Most recent date with a COMPLETED regular session as of `et` — the latest weekday whose
+# 16:00 ET close has already passed. Ignores holidays (at worst it triggers one harmless extra
+# fetch on a holiday). Used to decide whether local data has fallen behind, even when closed.
+function _last_session(et::DateTime)
+    d = Date(et)
+    closed_today = dayofweek(d) <= 5 && hour(et) * 60 + minute(et) >= 960   # weekday, past 16:00 ET
+    closed_today || (d -= Day(1))
+    while dayofweek(d) > 5; d -= Day(1); end                                # back to a weekday
+    return d
+end
+
+"Date of the most recent completed regular session as of now (ignores holidays)."
+last_session_date() = _last_session(now_et())
+
 "Regenerate the web app's bundled data file (`web/data.js`) from an already-loaded series; the
 `provisional` date (if any) gets a 7th `,P` field so the page can flag it as a mid-session bar."
 function write_web_bundle(d::MarketData; path::AbstractString, provisional=nothing)

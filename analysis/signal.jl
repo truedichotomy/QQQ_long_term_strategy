@@ -20,25 +20,32 @@ const DATADIR = joinpath(dirname(@__DIR__), "data")
 const WEBDIR  = joinpath(dirname(@__DIR__), "web")
 
 function show_signal(ticker; mode::Symbol=:auto)
-    # ---- fetch decision: throttle to ≤1×/hour, and (in :auto) only while the market is open ----
+    # ---- fetch decision ----
+    # Pull from Yahoo only when worth it: throttle to ≤1×/hour, and (in :auto) fetch when the
+    # market is OPEN *or* the local data is behind the most recent completed session — so a run
+    # after the close still catches up if we've missed a day or more. --fetch forces, --no-fetch skips.
     age = archive_age(ticker; dir=DATADIR)
-    do_fetch = mode == :force || (mode == :auto && market_open_et() && age >= 3600)
+    d = load_ticker(ticker; dir=DATADIR)
+    mkt_open = market_open_et()
+    stale = d.date[end] < last_session_date()
+    do_fetch = mode == :force || (mode == :auto && age >= 3600 && (mkt_open || stale))
     if do_fetch
         try
             st = update_data(ticker; dir=DATADIR)
             @printf("↻ fetched latest from Yahoo — local archive: %s\n",
                     st.total == 0 ? "empty (committed data already current)" :
                     @sprintf("%d bar(s) beyond committed data (%s … %s), +%d new", st.total, st.first, st.last, st.added))
+            d = load_ticker(ticker; dir=DATADIR)        # reload to include the freshly fetched bars
         catch e
             @printf("⚠ could not fetch latest data (%s) — using existing local data\n", sprint(showerror, e))
         end
     else
-        why = mode == :never ? "--no-fetch" : !market_open_et() ? "market closed" : "pulled <1h ago"
+        why = mode == :never ? "--no-fetch" :
+              age < 3600     ? "pulled <1h ago" :
+                               "market closed, data already current"
         agestr = isfinite(age) ? @sprintf(", last pull %dm ago", round(Int, age / 60)) : ""
         @printf("• not fetching (%s%s) — using local data; pass --fetch to force a refresh\n", why, agestr)
     end
-
-    d = load_ticker(ticker; dir=DATADIR)
     n = length(d)
 
     # ---- actionable bar: before noon ET, act on the last completed session rather than
@@ -64,7 +71,7 @@ function show_signal(ticker; mode::Symbol=:auto)
 
     println("="^64)
     @printf("%s  blend signal  —  as of %s   (%s ET · market %s)\n",
-            ticker, d.date[si], Dates.format(et, "HH:MM"), market_open_et() ? "OPEN" : "closed")
+            ticker, d.date[si], Dates.format(et, "HH:MM"), mkt_open ? "OPEN" : "closed")
     isempty(asnote) || println(asnote)
     println("="^64)
     @printf("  close %.2f      SMA-50 %.0f %s SMA-200 %.0f      CCI(40) %.0f\n",

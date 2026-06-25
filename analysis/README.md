@@ -32,9 +32,10 @@ Optional ticker argument (default QQQ): `julia analysis/signal.jl QQQ`.
 **`signal.jl` does this for you** — it pulls the latest QQQ bars from a free public source
 (Yahoo Finance, via stdlib `Downloads`; no API key, no data-service site), merges them into
 `data/`, and refreshes the web bundle. To spare the free API, the pull is **throttled**: it only
-happens when the local data is **over an hour old** *and* the **US market is open** (when the
-market is closed the stored last close is already final, so there's nothing new to get). So
-normally you just:
+happens when the local data is **over an hour old** *and* either the **US market is open** *or* the
+local data has **fallen behind the most recent completed session** (an idle closed market whose last
+close you already hold needs no pull, but a run after a few days away still catches up). So normally
+you just:
 
 ```bash
 julia analysis/signal.jl              # pull if stale & market open → merge → signal (+ refresh web/data.js)
