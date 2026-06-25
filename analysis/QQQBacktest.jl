@@ -42,6 +42,7 @@ export align_close, sma_aligned, momentum, above_own_sma, cross_own,
 export HORIZONS, rolling_compare, multiscale,
        win_cagr, win_calmar, win_sharpe, walk_forward, equity_from_sr
 # data fetch / web bundle
-export fetch_ohlcv, append_to_archive, update_data, archive_provisional, write_web_bundle
+export fetch_ohlcv, append_to_archive, update_data, archive_provisional, write_web_bundle,
+       now_et, market_open_et, archive_age
 
 end # module

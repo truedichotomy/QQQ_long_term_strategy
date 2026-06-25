@@ -29,9 +29,10 @@ merged together first (newest pull wins), then merged into the database.
 ## Keeping the bundle current
 
 The bundled history lives in **`web/data.js`** (generated, not hand-edited). It's refreshed
-**automatically every time you run `julia analysis/signal.jl`** (which also auto-pulls the
-latest data) or `analysis/fetch_data.jl`. So the usual way to update the page's default data is
-just to run the signal once, then reopen `index.html`. To rebuild it manually:
+**every time you run `julia analysis/signal.jl`** (which also pulls the latest data when it's
+stale and the market is open — `--fetch` forces a pull) or `analysis/fetch_data.jl`. So the usual
+way to update the page's default data is just to run the signal once, then reopen `index.html`.
+To rebuild it manually:
 
 ```bash
 node web/build_data.js     # rebuilds web/data.js from data/ (byte-identical to the Julia writer)

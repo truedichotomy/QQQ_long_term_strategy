@@ -17,10 +17,14 @@ export PATH="$HOME/.juliaup/bin:$PATH"     # Julia lives in ~/.juliaup/bin
 julia --startup-file=no analysis/signal.jl
 ```
 
-That one command **automatically pulls the latest QQQ data** from a free public source
+That one command **pulls the latest QQQ data when it's worth it** from a free public source
 (Yahoo Finance — no API key, no data-service site), merges it into `data/`, prints the current
-**buy-hold / sell-wait** call with the two-filter breakdown, and refreshes the web app's
-bundled data. No data to hunt down. Add `--no-fetch` to run offline on the existing data.
+**buy-hold / sell-wait** call for **both blends** with the two-filter breakdown, and refreshes the
+web app's bundled data. No data to hunt down. To spare the free API the pull is **throttled** — it
+only happens if the local data is over an hour old *and* the US market is open (when closed, the
+stored last close is already final). Add `--fetch` to force a refresh, or `--no-fetch` to run
+offline. Before noon ET the call is read off the last completed session; after noon it uses today's
+still-forming bar, to plan tomorrow's trade.
 
 **No Julia?** Open **[web/index.html](web/index.html)** in any browser — it shows the signal
 from the bundled history (refreshed whenever you run `signal.jl`), with tabs for either blend

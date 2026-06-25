@@ -163,6 +163,29 @@ end
 const _WEB_HEADER = "/* Bundled QQQ daily OHLCV (merged from data/) so the page shows a signal on open.\n" *
                     "   Generated — refresh with: julia analysis/fetch_data.jl (or node web/build_data.js). Do not hand-edit. */"
 
+# ---- market clock (US Eastern, DST-aware, no packages) + fetch-throttle helper ----
+function _et_offset(u::DateTime)
+    y = year(u)
+    nth_sun(mn, k) = (d = Date(y, mn, 1); DateTime(d + Day(mod(7 - dayofweek(d), 7) + 7 * (k - 1))))
+    dst_start = nth_sun(3, 2) + Hour(7)      # 2 AM EST = 07:00 UTC, 2nd Sunday of March
+    dst_end   = nth_sun(11, 1) + Hour(6)     # 2 AM EDT = 06:00 UTC, 1st Sunday of November
+    return (dst_start <= u < dst_end) ? -4 : -5
+end
+
+"Current wall-clock time in US Eastern (DST-aware), as a `DateTime`."
+now_et() = (u = now(UTC); u + Hour(_et_offset(u)))
+
+"Is the US regular equity session open right now? (weekday 09:30–16:00 ET; ignores holidays.)"
+function market_open_et()
+    et = now_et(); dayofweek(et) >= 6 && return false
+    m = hour(et) * 60 + minute(et)
+    return 570 <= m < 960
+end
+
+"Seconds since `ticker`'s local archive was last written (Inf if it doesn't exist)."
+archive_age(ticker::AbstractString; dir::AbstractString) =
+    (p = _archive_path(ticker, dir); isfile(p) ? time() - mtime(p) : Inf)
+
 "Regenerate the web app's bundled data file (`web/data.js`) from an already-loaded series; the
 `provisional` date (if any) gets a 7th `,P` field so the page can flag it as a mid-session bar."
 function write_web_bundle(d::MarketData; path::AbstractString, provisional=nothing)

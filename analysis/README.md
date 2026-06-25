@@ -29,14 +29,22 @@ adopted **either-on blend**, with the trend- and momentum-filter breakdown:
 Optional ticker argument (default QQQ): `julia analysis/signal.jl QQQ`.
 
 ### Updating the data
-**`signal.jl` does this automatically** — every run it pulls the latest QQQ bars from a free
-public source (Yahoo Finance, via stdlib `Downloads`; no API key, no data-service site), merges
-them into `data/`, and refreshes the web bundle. So normally you just:
+**`signal.jl` does this for you** — it pulls the latest QQQ bars from a free public source
+(Yahoo Finance, via stdlib `Downloads`; no API key, no data-service site), merges them into
+`data/`, and refreshes the web bundle. To spare the free API, the pull is **throttled**: it only
+happens when the local data is **over an hour old** *and* the **US market is open** (when the
+market is closed the stored last close is already final, so there's nothing new to get). So
+normally you just:
 
 ```bash
-julia analysis/signal.jl              # auto-pull latest → merge → signal (+ refresh web/data.js)
+julia analysis/signal.jl              # pull if stale & market open → merge → signal (+ refresh web/data.js)
+julia analysis/signal.jl --fetch      # force a fresh pull regardless of throttle
 julia analysis/signal.jl --no-fetch   # offline: use existing data only
 ```
+
+**Actionable bar:** before noon ET the signal is reported off the last *completed* session
+(today's bar has barely formed); after noon it switches to today's in-progress (provisional)
+bar, the more useful reference for planning tomorrow's trade.
 
 To fetch/inspect explicitly, or for another ticker, use `fetch_data.jl`:
 
@@ -208,7 +216,7 @@ execution: **[STRATEGY.md](STRATEGY.md)**; it's what `signal.jl` reports.
 - `fetch.jl` — pull recent OHLCV from Yahoo (`fetch_ohlcv`/`update_data`), accumulate into the persistent local archive (`append_to_archive`), and regenerate the web bundle (`write_web_bundle`)
 
 **`analysis/` (root) — production: the two blend cases**
-- `signal.jl` — **the day-to-day tool**: auto-pulls the latest data, then prints the buy-hold/sell-wait call for the adopted either-on blend + filter breakdown (and refreshes `web/data.js`)
+- `signal.jl` — **the day-to-day tool**: pulls the latest data when stale (>1h) & the market is open (`--fetch` forces, `--no-fetch` offline), then prints the buy-hold/sell-wait call for **both** blends (either-on + avg ½-size) and the filter breakdown (and refreshes `web/data.js`)
 - `fetch_data.jl` — explicit fetch of recent daily OHLCV from a free public source (Yahoo, via stdlib `Downloads`); no API key or data-service site
 - `build_blend_pages.jl` — self-contained execution webpages (`results/blend_either_on.html`, `results/blend_avg.html`)
 - `blend_finalists_compare.jl` / `blend_walkforward.jl` — side-by-side battery and OOS validation (STRATEGY.md §3–4)
