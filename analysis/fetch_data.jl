@@ -42,7 +42,9 @@ end
 
 if save
     st = append_to_archive(ticker, rows; dir=DATADIR)
-    @printf("\nMerged into the local archive — now %d bars (%s … %s), +%d new\n", st.total, st.first, st.last, st.added)
+    @printf("\nMerged into the local archive — %s\n",
+            st.total == 0 ? "empty (committed data already covers these dates)" :
+            @sprintf("%d bar(s) beyond committed data (%s … %s), +%d new", st.total, st.first, st.last, st.added))
     if ticker == "QQQ" && isdir(WEBDIR)
         write_web_bundle(load_ticker("QQQ"; dir=DATADIR); path=joinpath(WEBDIR, "data.js"))
         println("Refreshed web/data.js.")

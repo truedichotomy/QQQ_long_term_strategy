@@ -71,18 +71,24 @@ function _merge_rows_by_date(existing, incoming)        # incoming wins on dupli
     return [byd[d] for d in sort(collect(keys(byd)))]
 end
 
-"Read the latest date present in any of `ticker`'s data files (to size a gap-bridging fetch)."
-function _last_date_in_data(ticker, dir)
+# Latest date present in a single data file (reads the last dated line).
+function _file_last_date(path)
+    lines = readlines(path)
+    for i in length(lines):-1:1
+        mm = match(r"(\d{4}-\d{2}-\d{2})", lines[i])
+        mm !== nothing && return Date(mm.captures[1])
+    end
+    return nothing
+end
+
+"Latest date present across `ticker`'s data files (optionally excluding one path)."
+function _last_date_in_data(ticker, dir; exclude=nothing)
     files = try find_data_files(ticker; dir=dir) catch; String[] end
     last = nothing
     for f in files
-        lines = readlines(f)
-        for i in length(lines):-1:1
-            mm = match(r"(\d{4}-\d{2}-\d{2})", lines[i])
-            if mm !== nothing
-                d = Date(mm.captures[1]); (last === nothing || d > last) && (last = d); break
-            end
-        end
+        f == exclude && continue
+        d = _file_last_date(f)
+        d !== nothing && (last === nothing || d > last) && (last = d)
     end
     return last
 end
@@ -90,15 +96,23 @@ end
 """
     append_to_archive(ticker, rows; dir) -> (added, total, first, last)
 
-Merge `rows` into the persistent local archive for `ticker` (accumulates across runs; dedup by
-date, new rows win on overlap). Returns counts and the archive's date span.
+Merge `rows` into the persistent local archive (dedup by date, new wins), then keep only the
+dates BEYOND what the committed/curated files already cover. So the archive is a clean
+forward-extension: a fresh master file dropped into `data/` (ahead of the archive) always
+supersedes it — the now-covered dates drop out of the archive automatically, with no gap (the
+master file provides them, independent of how far Yahoo can reach). If no curated file exists,
+nothing is pruned and the archive is self-contained. Returns counts and the archive's span.
 """
 function append_to_archive(ticker::AbstractString, rows; dir::AbstractString)
-    existing = _read_archive_rows(_archive_path(ticker, dir))
-    merged = _merge_rows_by_date(existing, rows)
+    path = _archive_path(ticker, dir)
+    before = Set(r.date for r in _read_archive_rows(path))
+    merged = _merge_rows_by_date(_read_archive_rows(path), rows)
+    cutoff = _last_date_in_data(ticker, dir; exclude=path)     # latest date the curated/master files cover
+    cutoff !== nothing && (merged = filter(r -> r.date > cutoff, merged))
     _write_archive(ticker, merged; dir=dir)
-    return (added = length(merged) - length(existing), total = length(merged),
-            first = merged[1].date, last = merged[end].date)
+    return (added = count(r -> !(r.date in before), merged), total = length(merged),
+            first = isempty(merged) ? nothing : merged[1].date,
+            last  = isempty(merged) ? nothing : merged[end].date)
 end
 
 """

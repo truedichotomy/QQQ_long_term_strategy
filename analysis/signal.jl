@@ -25,8 +25,9 @@ function show_signal(ticker; fetch::Bool=true)
     if fetch
         try
             st = update_data(ticker; dir=DATADIR)
-            @printf("↻ updated local price archive from Yahoo: %d bars (%s … %s), +%d new this run\n",
-                    st.total, st.first, st.last, st.added)
+            @printf("↻ fetched latest from Yahoo — local archive: %s\n",
+                    st.total == 0 ? "empty (committed data already current)" :
+                    @sprintf("%d bar(s) beyond committed data (%s … %s), +%d new", st.total, st.first, st.last, st.added))
         catch e
             @printf("⚠ could not fetch latest data (%s) — using existing local data\n", sprint(showerror, e))
         end
