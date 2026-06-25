@@ -1,7 +1,9 @@
 /* app.js — UI for the QQQ blend signal. Ships with the QQQ history bundled (data.js) so it
  * shows a signal on open. A tab chooses the blend (either-on / avg). An "as of" date lets you
  * see what the call was on any past trading day. Uploading a newer file APPENDS to a local,
- * deduplicated database (localStorage). All client-side — no server, nothing uploaded. */
+ * deduplicated database (localStorage). All client-side — no server, nothing uploaded.
+ * Default bar mirrors signal.jl: before noon ET it reports the last completed session (today's
+ * bar has barely formed); after noon it uses today's still-forming provisional bar. */
 (function () {
   'use strict';
   var S = window.QQQStrategy;
@@ -31,6 +33,27 @@
   var ri = function (x) { return (x == null || isNaN(x)) ? '–' : Math.round(x); };
   var rv = function (x) { return (x == null || isNaN(x)) ? '–' : Math.round(x).toLocaleString(); };
   var chip = function (on) { return on ? '<span class="chip in">IN</span>' : '<span class="chip out">OUT</span>'; };
+
+  // The actionable bar, mirroring signal.jl: before noon ET, report the last completed session
+  // rather than today's still-forming (provisional) bar; after noon, use today's provisional bar.
+  function etNow() {
+    try {
+      var d = new Date();
+      return { date: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d),
+               hour: parseInt(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', hour12: false, hourCycle: 'h23' }).format(d), 10) || 0 };
+    } catch (e) {
+      var x = new Date(), m = x.getMonth() + 1, dd = x.getDate();
+      return { date: x.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (dd < 10 ? '0' : '') + dd, hour: x.getHours() };
+    }
+  }
+  function defaultIndex() {
+    var n = ANALYSIS.rows.length - 1, last = ANALYSIS.rows[n];
+    if (last && last.partial && (n - 1) >= MIN_I) {
+      var et = etNow();
+      if (ANALYSIS.date[n] === et.date && et.hour < 12) return n - 1;   // before noon ET → last completed session
+    }
+    return n;
+  }
 
   function renderSignal(g) {
     var cls, action, sub, combine;
@@ -65,9 +88,10 @@
     out.innerHTML =
       '<div class="signal ' + cls + '">' +
         '<div><span class="sigaction">' + action + '</span><span class="sigsub">' + sub + '</span></div>' +
-        '<div class="sigasof">' + (g.isLatest ? 'live signal as of ' : 'historical signal as of ') +
+        '<div class="sigasof">' + (g.live ? 'live signal as of ' : 'historical signal as of ') +
           '<b>' + esc(g.asOf) + '</b> · QQQ close ' + r(g.close, 2) + ' · CCI(40) ' + ri(g.cci40) +
-          (g.provisional ? ' <span class="prov">⚠ provisional (mid-session — not yet final)</span>' : '') + '</div>' +
+          (g.provisional ? ' <span class="prov">⚠ provisional (mid-session — not yet final)</span>' : '') +
+          (g.heldForming ? ' <span class="prov">· today’s bar (' + esc(g.heldForming) + ') still forming — held until noon ET</span>' : '') + '</div>' +
         '<div class="brk">' +
           '<div class="brow"><span class="bn">Trend filter — SMA 50/200 fast‑reentry</span>' + chip(g.trendIn) +
             '<span class="bd">' + trendDetail + ' · since ' + esc(g.trendSince) + '</span></div>' +
@@ -76,7 +100,7 @@
           '<div class="bcombine">' + combine + '</div>' +
         '</div>' +
       '</div>' +
-      '<div class="meta">' + (g.isLatest ? 'Last bars:' : 'Bars up to ' + esc(g.asOf) + ':') + '</div>' +
+      '<div class="meta">' + (g.live ? 'Last bars:' : 'Bars up to ' + esc(g.asOf) + ':') + '</div>' +
       '<div class="tablewrap"><table><thead><tr><th>Date</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th></tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody></table></div>';
   }
@@ -93,11 +117,15 @@
   // Render the signal as of bar index `i` (clamped to the analyzable range).
   function renderAt(i) {
     if (!ANALYSIS) return;
-    i = Math.max(MIN_I, Math.min(i, ANALYSIS.rows.length - 1));
+    var n = ANALYSIS.rows.length - 1;
+    i = Math.max(MIN_I, Math.min(i, n));
     asofIndex = i;
     lastG = S.signalAt(ANALYSIS, i);
+    var di = defaultIndex();
+    lastG.live = (i === n) || (i === di);                               // the current actionable call
+    lastG.heldForming = (i === di && di < n) ? ANALYSIS.date[n] : null; // today's still-forming bar, held before noon
     if (asofInput.value !== lastG.asOf) asofInput.value = lastG.asOf;   // snap to the trading date
-    latestBtn.classList.toggle('hidden', lastG.isLatest);
+    latestBtn.classList.toggle('hidden', i === n);                     // offer "↻ latest" whenever not on the newest bar
     applyBlend();
   }
 
@@ -123,7 +151,7 @@
     MIN_I = S.firstValidIndex(ANALYSIS);
     asofInput.min = ANALYSIS.date[MIN_I];
     asofInput.max = ANALYSIS.date[db.length - 1];
-    renderAt(db.length - 1);                  // default to the latest date
+    renderAt(defaultIndex());                 // default to the actionable bar (before noon ET: last completed session)
     setStatusBar(db, note);
   }
 

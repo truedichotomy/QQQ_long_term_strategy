@@ -17,6 +17,9 @@ Everything runs in your browser; nothing is uploaded.
    - Both are deep-linkable and remembered: `index.html?blend=avg&asof=2008-11-20`.
    - If the latest bar was pulled **mid-session** it's flagged **⚠ provisional** — it'll be
      replaced by the final daily values the next time the data is refreshed after the close.
+   - The **default bar mirrors `signal.jl`**: before noon ET it reports the last *completed*
+     session (today's bar has barely formed; a note flags that today's bar is held until noon);
+     after noon it uses today's provisional bar. **↻ latest** still jumps to the newest bar.
 2. **To update:** drop a newer QQQ CSV onto the "update" zone (or click to choose). New bars
    are **merged into a local database and deduplicated by date** (on an overlapping date the
    uploaded value wins). The merged database is **saved in your browser** (`localStorage`) and
