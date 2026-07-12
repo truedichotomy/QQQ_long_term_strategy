@@ -118,9 +118,11 @@
   function applyBlend() {
     Array.prototype.forEach.call(tabsEl.children, function (b) {
       b.classList.toggle('active', b.getAttribute('data-blend') === blend); });
-    blendDescEl.innerHTML = blend === 'avg'
+    blendDescEl.innerHTML = (blend === 'avg'
       ? 'Average of the two filters (0 / 50 / 100% invested) — smoothest ride, cushions fast crashes too, ~12 trades/yr.'
-      : 'Long if <b>either</b> filter is in — highest return, ~3 trades/yr, simple all‑in/all‑out.';
+      : 'Long if <b>either</b> filter is in — highest return, ~3 trades/yr, simple all‑in/all‑out.') +
+      ' <a class="stratlink" href="' + (blend === 'avg' ? 'blend_avg.html' : 'blend_either_on.html') +
+      '">how this strategy works ▸</a>';
     if (lastG) renderSignal(lastG);
   }
 

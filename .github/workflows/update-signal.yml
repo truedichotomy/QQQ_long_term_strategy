@@ -113,6 +113,14 @@ jobs:
             "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
           echo 'ntfy push sent'
 
+      # The strategy explainer pages ship with the site but are never committed to
+      # web/ (gitignored): regenerated here from the fresh data so their stats stay
+      # current, while analysis/results/ keeps the committed study record.
+      - name: Build strategy explainer pages
+        run: |
+          julia --startup-file=no analysis/build_blend_pages.jl
+          cp 'analysis/results/blend_either_on.html' 'analysis/results/blend_avg.html' web/
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3

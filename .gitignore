@@ -1,2 +1,7 @@
 
 .DS_Store
+
+# strategy explainer pages are generated into analysis/results/ (the committed
+# record) and copied into web/ only at deploy time by the workflow
+web/blend_either_on.html
+web/blend_avg.html
