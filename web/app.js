@@ -175,8 +175,8 @@
       'SMA‑200 ' + ri(g.sma200) + ' — ' + (g.sma50 > g.sma200 ? 'uptrend' : 'downtrend');
     var momDetail = 'CCI(40) ' + ri(g.cci40) + ' vs exit ' + g.momExit +
       ' · 200‑day triangular MA ' + (g.tmaDown ? 'falling' : 'rising');
-    var rowsHtml = g.recent.map(function (x, i) {
-      var hl = i === g.recent.length - 1;
+    var rowsHtml = g.recent.slice().reverse().map(function (x, i) {   // newest bar on top
+      var hl = i === 0;
       return '<tr' + (hl ? ' class="today"' : '') + '><td>' + esc(x.date) + (x.partial ? ' <span class="prov">⚠</span>' : '') + '</td><td>' +
         r(x.o, 2) + '</td><td>' + r(x.h, 2) + '</td><td>' + r(x.l, 2) + '</td><td>' +
         r(x.c, 2) + '</td><td>' + rv(x.v) + '</td></tr>';
@@ -198,7 +198,7 @@
         '</div>' +
       '</div>' +
       renderActions(g) +
-      '<div class="meta">' + (g.live ? 'Last bars:' : 'Bars up to ' + esc(g.asOf) + ':') + '</div>' +
+      '<div class="meta">' + (g.live ? 'QQQ last bars:' : 'QQQ bars up to ' + esc(g.asOf) + ':') + '</div>' +
       '<div class="tablewrap"><table><thead><tr><th>Date</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th></tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody></table></div>';
   }
