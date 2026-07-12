@@ -55,6 +55,15 @@
     return n;
   }
 
+  // Warn when the newest bar has gone stale (the nightly auto-update may be broken).
+  // The widest normal gap is a long holiday weekend; beyond 5 days something is wrong.
+  function staleWarn() {
+    var last = ANALYSIS.date[ANALYSIS.rows.length - 1];
+    var days = Math.round((new Date(etNow().date) - new Date(last)) / 864e5);
+    return days > 5 ? ' <span class="prov">⚠ newest bar (' + esc(last) + ') is ' + days +
+      ' days old — the nightly data update may be failing</span>' : '';
+  }
+
   function renderSignal(g) {
     var cls, action, sub, combine;
     if (blend === 'avg') {
@@ -91,7 +100,8 @@
         '<div class="sigasof">' + (g.live ? 'live signal as of ' : 'historical signal as of ') +
           '<b>' + esc(g.asOf) + '</b> · QQQ close ' + r(g.close, 2) + ' · CCI(40) ' + ri(g.cci40) +
           (g.provisional ? ' <span class="prov">⚠ provisional (mid-session — not yet final)</span>' : '') +
-          (g.heldForming ? ' <span class="prov">· today’s bar (' + esc(g.heldForming) + ') still forming — held until noon ET</span>' : '') + '</div>' +
+          (g.heldForming ? ' <span class="prov">· today’s bar (' + esc(g.heldForming) + ') still forming — held until noon ET</span>' : '') +
+          (g.live ? staleWarn() : '') + '</div>' +
         '<div class="brk">' +
           '<div class="brow"><span class="bn">Trend filter — SMA 50/200 fast‑reentry</span>' + chip(g.trendIn) +
             '<span class="bd">' + trendDetail + ' · since ' + esc(g.trendSince) + '</span></div>' +

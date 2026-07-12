@@ -1,5 +1,8 @@
 # QQQ_long_term_strategy
 
+**Live signal: <https://truedichotomy.github.io/QQQ_long_term_strategy/>** — auto-updated
+each market day after the close by a GitHub Actions cron.
+
 Personal quantitative investment research in Julia — a zero-dependency backtesting
 toolkit that designs and validates **long/flat timing overlays on QQQ** (be fully in
 QQQ or in cash), judged on return **and** drawdown versus buy-and-hold.

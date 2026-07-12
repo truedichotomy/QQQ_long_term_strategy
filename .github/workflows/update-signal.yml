@@ -1,0 +1,73 @@
+# Nightly after-close refresh of the QQQ signal site.
+#
+# 23:30 UTC is 18:30 EST / 19:30 EDT — comfortably after the 16:00 ET close year-round,
+# so the fetched bar is always final (never provisional). `signal.jl --fetch` forces the
+# Yahoo pull, merges into data/, regenerates web/data.js, and prints the signal into the
+# run log. The refreshed data is committed back to main (GITHUB_TOKEN pushes don't
+# re-trigger workflows), then web/ is deployed to GitHub Pages.
+name: update-signal
+
+on:
+  schedule:
+    - cron: '30 23 * * 1-5'   # weekdays 23:30 UTC — after the US close
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['web/**', 'analysis/**', 'data/**']
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: update-signal
+  cancel-in-progress: false
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+
+      - name: Fetch latest data & compute the signal
+        run: |
+          julia --startup-file=no analysis/signal.jl --fetch | tee signal.out
+          # signal.jl warns-and-continues on fetch problems; fail the run instead so
+          # breakage emails us rather than silently serving a stale signal.
+          if grep -q -e 'could not fetch' -e 'DATA GAP' signal.out; then
+            echo '::error::data fetch problem — see the signal output above'
+            exit 1
+          fi
+
+      - name: Smoke-test the JS port against the updated data
+        run: node web/verify_node.js
+
+      - name: Commit refreshed data
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data web/data.js
+          if git diff --cached --quiet; then
+            echo 'no new bars (holiday or already current) — nothing to commit'
+          else
+            git commit -m "Auto-update QQQ data ($(date -u +%F))"
+            git pull --rebase origin main
+            git push
+          fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
