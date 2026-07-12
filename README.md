@@ -1,4 +1,4 @@
-# investment
+# QQQ_long_term_strategy
 
 Personal quantitative investment research in Julia — a zero-dependency backtesting
 toolkit that designs and validates **long/flat timing overlays on QQQ** (be fully in

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A personal quantitative investment analysis project written in Julia (`.jl` scripts run directly, not a package). There is no build system or automated test suite. Julia **is** installed, but at `~/.juliaup/bin/julia` and **not on `PATH`** — prefix it (`export PATH="$HOME/.juliaup/bin:$PATH"`) or call the full path. The global package env is empty, so prefer **pure base Julia + stdlib** (`Statistics`, `Printf`, `Dates`) and avoid heavy packages (CSV/DataFrames/Plots) — the `analysis/` pipeline parses CSVs and renders charts (SVG) with zero dependencies on purpose.
 
-The repo is **all about the `analysis/` pipeline on QQQ daily data**. There is a top-level `old/` directory of unrelated 2024 legacy scripts — **ignore it entirely**; it has no bearing on current work.
+The repo is **all about the `analysis/` pipeline on QQQ daily data**.
 
 ## Running scripts
 
