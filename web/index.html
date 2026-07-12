@@ -61,6 +61,8 @@
   #reset{font-size:12px;color:#8a9099;cursor:pointer;background:none;border:none;text-decoration:underline;padding:0}
   .err{background:#fdecec;border:1px solid #f3c2c2;color:#a3171f;border-radius:8px;padding:11px 14px;font-size:13.5px;margin:8px 0}
   .foot{margin-top:20px;border-top:1px solid #e3e6ea;padding-top:12px;color:#888;font-size:11.5px}
+  .foot a{color:#1f6feb;text-decoration:none}
+  .foot a:hover{text-decoration:underline}
   code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:12px;background:#eef1f4;padding:1px 5px;border-radius:4px}
   /* iPhone / narrow screens */
   @media (max-width:480px){
@@ -81,8 +83,9 @@
 <body>
 <div class="wrap">
   <h1>QQQ Blend Signal</h1>
-  <div class="sub">Today's call for the QQQ <b>blend overlay</b>, computed in your browser from the
-    bundled history. No server, nothing uploaded.</div>
+  <div class="sub">Today's call for the QQQ <b>blend overlay</b>. The bundled data
+    <b>updates automatically each market day after the close</b>; the signal is computed in your
+    browser — nothing is uploaded.</div>
 
   <div class="controls">
     <div class="tabs" id="tabs">
@@ -97,8 +100,8 @@
   <div id="out"></div>
 
   <div id="update">
-    <div id="drop"><b>Drop a newer QQQ data file here to update</b> — or click to choose<br>
-      <span style="font-size:12px;color:#8a9099">new bars are merged into your local database and deduplicated by date</span></div>
+    <div id="drop"><b>Drop a newer QQQ data file here to update manually</b> — or click to choose<br>
+      <span style="font-size:12px;color:#8a9099">usually unnecessary (data refreshes nightly on its own) — dropped bars are merged into your local database and deduplicated by date</span></div>
     <input id="file" type="file" accept=".csv,text/csv" multiple style="display:none">
     <div class="statusbar"><span id="status"></span><button id="reset">reset to bundled data</button></div>
   </div>
@@ -107,7 +110,10 @@
     Long/flat timing overlay: in QQQ unless <b>both</b> a 50/200 SMA trend filter and a CCI(40)/TMA(200)
     momentum filter are out; re‑enter when either turns back in. Indicators are computed from the OHLCV
     columns only; the trade is acted on the next session (no look‑ahead). Mechanical backtest rule,
-    <b>not investment advice</b>. Method: <code>analysis/STRATEGY.md</code>.
+    <b>not investment advice</b>.
+    Strategy writeup: <a href="https://github.com/truedichotomy/QQQ_long_term_strategy/blob/main/analysis/STRATEGY.md">execution
+    guide</a> · <a href="https://github.com/truedichotomy/QQQ_long_term_strategy/blob/main/analysis/README.md">full study</a> ·
+    <a href="https://github.com/truedichotomy/QQQ_long_term_strategy">source</a>.
   </div>
 </div>
 <script src="data.js"></script>
