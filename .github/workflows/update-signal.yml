@@ -47,8 +47,8 @@ jobs:
             exit 1
           fi
 
-      - name: Smoke-test the JS port against the updated data
-        run: node web/verify_node.js
+      - name: Verify the JS port reproduces the Julia signal bar-for-bar
+        run: julia --startup-file=no web/verify_parity.jl
 
       - name: Detect a change in trade action
         id: flip
