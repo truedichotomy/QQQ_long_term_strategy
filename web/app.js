@@ -103,10 +103,38 @@
     return acts.reverse();
   }
 
+  // Net result of the active blend vs buy-and-hold over the panel window ending at
+  // bar `i`, replicating src/engine.jl: the signal is lagged one trading day, a 5 bps
+  // cost is charged on turnover, and cash earns 4%/yr while out of the market.
+  var COST = 5e-4, RF_D = Math.pow(1.04, 1 / 252) - 1;
+  function windowStats(a, i) {
+    var s = blend === 'avg' ? a.avg : a.either;
+    var asOf = a.date[i];
+    var cutoff = (parseInt(asOf.slice(0, 4), 10) - actionYears()) + asOf.slice(4);
+    var k0 = 0; while (k0 < i && a.date[k0] < cutoff) k0++;
+    if (i - k0 < 40) return null;                       // window too short to annualize
+    var eq = 1;
+    for (var t = k0 + 1; t <= i; t++) {
+      var r = a.close[t] / a.close[t - 1] - 1;
+      var p = s[t - 1], pp = t >= 2 ? s[t - 2] : 0;     // lagged position & turnover
+      eq *= (1 + p * r + (1 - p) * RF_D) * (1 - COST * Math.abs(p - pp));
+    }
+    var years = (new Date(asOf) - new Date(a.date[k0])) / 864e5 / 365.25;
+    return { years: years,
+             overlay: Math.pow(eq, 1 / years) - 1,
+             bh: Math.pow(a.close[i] / a.close[k0], 1 / years) - 1 };
+  }
+
   function renderActions(g) {
     var a = ANALYSIS, acts = buildActions(a, g.index);
     var head = '<div class="meta">Trade actions — past ' + actionYears() + ' years (' +
       (blend === 'avg' ? 'avg ½-size' : 'either-on') + '):</div>';
+    var st = windowStats(a, g.index);
+    if (st) {
+      head += '<div class="actstat">Net result: <b class="' + (st.overlay >= st.bh ? 'seg-good' : 'seg-bad') + '">' +
+        fmtPct(st.overlay) + '/yr</b> vs buy‑and‑hold <b>' + fmtPct(st.bh) + '/yr</b> over the past ' +
+        st.years.toFixed(1) + ' yrs <span class="statnote">(annualized; signal lagged a day, 0.05% trade cost, cash earns 4%/yr while out)</span></div>';
+    }
     if (!acts.length) {
       var st = blend === 'avg' ? (Math.round(g.avgExposure * 100) + '% QQQ') : (g.eitherLong ? 'in QQQ' : 'in cash');
       return head + '<div class="meta">no changes — ' + st + ' since ' +
