@@ -1,7 +1,10 @@
 # QQQ_long_term_strategy
 
 **Live signal: <https://truedichotomy.github.io/QQQ_long_term_strategy/>** — auto-updated
-each market day after the close by a GitHub Actions cron.
+each market day after the close by a GitHub Actions cron. When the trade action changes,
+the cron publishes a [GitHub release](../../releases) — Watch this repo (Custom → Releases)
+to get those by email, or subscribe to the [releases feed](../../releases.atom) by RSS;
+a private ntfy.sh push topic is also notified.
 
 Personal quantitative investment research in Julia — a zero-dependency backtesting
 toolkit that designs and validates **long/flat timing overlays on QQQ** (be fully in

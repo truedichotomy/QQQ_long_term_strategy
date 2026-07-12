@@ -50,11 +50,15 @@ jobs:
       - name: Smoke-test the JS port against the updated data
         run: node web/verify_node.js
 
+      - name: Detect a change in trade action
+        id: flip
+        run: node web/signal_state.js
+
       - name: Commit refreshed data
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data web/data.js
+          git add data web/data.js .github/signal-state.json
           if git diff --cached --quiet; then
             echo 'no new bars (holiday or already current) — nothing to commit'
           else
@@ -62,6 +66,52 @@ jobs:
             git pull --rebase origin main
             git push
           fi
+
+      # Subscribers get flip alerts two ways: a GitHub Release (Watch → Custom →
+      # Releases emails them; releases.atom is the RSS feed) and an ntfy.sh push
+      # (topic kept in the NTFY_TOPIC repo secret so outsiders can't spoof it).
+      - name: Publish signal-change release
+        if: steps.flip.outputs.flipped == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTION: ${{ steps.flip.outputs.action }}
+          EITHER: ${{ steps.flip.outputs.either }}
+          PREV: ${{ steps.flip.outputs.prev }}
+          ASOF: ${{ steps.flip.outputs.asof }}
+          CLOSE: ${{ steps.flip.outputs.close }}
+          AVG: ${{ steps.flip.outputs.avg }}
+        run: |
+          ICON=$([ "$EITHER" = BUY ] && echo '▲' || echo '▼')
+          gh release create "signal-$ASOF" \
+            --title "$ICON QQQ signal: $ACTION (as of $ASOF)" \
+            --notes "The either-on blend changed from $PREV to **$EITHER** as of the $ASOF close (QQQ $CLOSE).
+
+          - Act at the next session's open — the strategy trades with a one-day lag (no look-ahead).
+          - Avg ½-size blend exposure: $AVG%.
+          - Live signal: https://truedichotomy.github.io/QQQ_long_term_strategy/
+
+          Watch this repo (Custom → Releases) to get these by email. Mechanical backtest rule — not investment advice; you alone are responsible for your trades. See LICENSE."
+
+      - name: Send ntfy push alert
+        if: steps.flip.outputs.flipped == 'true'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          ACTION: ${{ steps.flip.outputs.action }}
+          EITHER: ${{ steps.flip.outputs.either }}
+          PREV: ${{ steps.flip.outputs.prev }}
+          ASOF: ${{ steps.flip.outputs.asof }}
+          CLOSE: ${{ steps.flip.outputs.close }}
+          AVG: ${{ steps.flip.outputs.avg }}
+        run: |
+          if [ -z "$NTFY_TOPIC" ]; then echo 'NTFY_TOPIC secret not set — skipping push alert'; exit 0; fi
+          TAG=$([ "$EITHER" = BUY ] && echo 'chart_with_upwards_trend' || echo 'chart_with_downwards_trend')
+          curl -fsS \
+            -H "Title: QQQ signal: $ACTION" \
+            -H "Priority: high" \
+            -H "Tags: $TAG" \
+            -d "As of the $ASOF close (QQQ $CLOSE): $PREV → $EITHER. Avg ½-size: $AVG%. Act at the next open. https://truedichotomy.github.io/QQQ_long_term_strategy/" \
+            "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
+          echo 'ntfy push sent'
 
       - uses: actions/configure-pages@v5
 
