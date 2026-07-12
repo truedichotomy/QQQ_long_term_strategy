@@ -66,13 +66,17 @@
 
   var fmtPct = function (r) { return (r >= 0 ? '+' : '−') + (100 * Math.abs(r)).toFixed(1) + '%'; };
 
-  // Trade actions of the active blend over the 2 years up to bar `i`, newest first.
+  // The panel window: either-on trades ~3×/yr so it gets 5 years; avg trades
+  // ~12×/yr so 2 years keeps the table a similar length.
+  function actionYears() { return blend === 'avg' ? 2 : 5; }
+
+  // Trade actions of the active blend over the window up to bar `i`, newest first.
   // Each carries the segment outcome: QQQ's move from the action until the next one
   // (or until bar `i` for the most recent), and whether the call helped.
   function buildActions(a, i) {
     var s = blend === 'avg' ? a.avg : a.either;
     var asOf = a.date[i];
-    var cutoff = (parseInt(asOf.slice(0, 4), 10) - 2) + asOf.slice(4);
+    var cutoff = (parseInt(asOf.slice(0, 4), 10) - actionYears()) + asOf.slice(4);
     var ks = [];
     for (var k = 1; k <= i; k++) if (s[k] !== s[k - 1]) ks.push(k);
     ks = ks.filter(function (k) { return a.date[k] >= cutoff; });
@@ -101,7 +105,7 @@
 
   function renderActions(g) {
     var a = ANALYSIS, acts = buildActions(a, g.index);
-    var head = '<div class="meta">Trade actions — past 2 years (' +
+    var head = '<div class="meta">Trade actions — past ' + actionYears() + ' years (' +
       (blend === 'avg' ? 'avg ½-size' : 'either-on') + '):</div>';
     if (!acts.length) {
       var st = blend === 'avg' ? (Math.round(g.avgExposure * 100) + '% QQQ') : (g.eitherLong ? 'in QQQ' : 'in cash');
