@@ -47,5 +47,16 @@ auto-pull lives in `signal.jl`. See [web/README.md](web/README.md).
 - **[data/](data/)** — daily OHLCV CSVs per ETF (only the 6 OHLCV columns are used; all
   indicators are computed from price).
 
-Pure base Julia + stdlib — nothing to install. Not investment advice; past performance
-does not guarantee future results.
+Pure base Julia + stdlib — nothing to install.
+
+## License & disclaimer
+
+Copyright © 2026 Donglai Gong. **All rights reserved** — publicly viewable for reference
+and education; no license to use, copy, or redistribute without written permission. See
+[LICENSE](LICENSE).
+
+**Not investment advice.** This project describes a mechanical backtest rule; past
+performance does not guarantee future results, and the data or signal may be delayed,
+incomplete, or wrong. Any trading or investment decision you make is yours alone — the
+author accepts no responsibility or liability for losses arising from the use of, or
+reliance on, anything in this repository or on the signal page.
