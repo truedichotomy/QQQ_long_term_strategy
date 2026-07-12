@@ -64,6 +64,61 @@
       ' days old — the nightly data update may be failing</span>' : '';
   }
 
+  var fmtPct = function (r) { return (r >= 0 ? '+' : '−') + (100 * Math.abs(r)).toFixed(1) + '%'; };
+
+  // Trade actions of the active blend over the 2 years up to bar `i`, newest first.
+  // Each carries the segment outcome: QQQ's move from the action until the next one
+  // (or until bar `i` for the most recent), and whether the call helped.
+  function buildActions(a, i) {
+    var s = blend === 'avg' ? a.avg : a.either;
+    var asOf = a.date[i];
+    var cutoff = (parseInt(asOf.slice(0, 4), 10) - 2) + asOf.slice(4);
+    var ks = [];
+    for (var k = 1; k <= i; k++) if (s[k] !== s[k - 1]) ks.push(k);
+    ks = ks.filter(function (k) { return a.date[k] >= cutoff; });
+    var acts = ks.map(function (k, j) {
+      var to = j + 1 < ks.length ? ks[j + 1] : i;      // segment runs to the next action or as-of
+      var ret = a.close[to] / a.close[k] - 1;
+      var exp = s[k];
+      var label, cls;
+      if (blend === 'avg') {
+        label = exp >= 1 ? '▲ 100% QQQ' : exp <= 0 ? '▼ 0% (cash)' : '◐ 50% QQQ';
+        cls = exp >= 1 ? 'act-buy' : exp <= 0 ? 'act-sell' : 'act-half';
+      } else {
+        label = exp === 1 ? '▲ BUY' : '▼ SELL';
+        cls = exp === 1 ? 'act-buy' : 'act-sell';
+      }
+      var outcome = 'QQQ ' + fmtPct(ret) +
+        (exp >= 1 ? ' while in' : exp <= 0 ? (ret < 0 ? ' while out · avoided' : ' while out · missed') : ' at 50% exposure') +
+        (j === ks.length - 1 ? ' (so far)' : '');
+      var good = exp >= 1 ? (ret >= 0) : exp <= 0 ? (ret < 0) : null;   // did the call help?
+      return { date: a.date[k], label: label, cls: cls, close: a.close[k],
+               filters: 'T' + (a.tr[k] ? '✓' : '✗') + ' · M' + (a.mom[k] ? '✓' : '✗'),
+               outcome: outcome, ocls: good == null ? 'seg-flat' : good ? 'seg-good' : 'seg-bad' };
+    });
+    return acts.reverse();
+  }
+
+  function renderActions(g) {
+    var a = ANALYSIS, acts = buildActions(a, g.index);
+    var head = '<div class="meta">Trade actions — past 2 years (' +
+      (blend === 'avg' ? 'avg ½-size' : 'either-on') + '):</div>';
+    if (!acts.length) {
+      var st = blend === 'avg' ? (Math.round(g.avgExposure * 100) + '% QQQ') : (g.eitherLong ? 'in QQQ' : 'in cash');
+      return head + '<div class="meta">no changes — ' + st + ' since ' +
+        esc(blend === 'avg' ? g.avgSince : g.eitherSince) + '.</div>';
+    }
+    var rowsHtml = acts.map(function (x) {
+      return '<tr><td>' + esc(x.date) + '</td><td class="' + x.cls + '">' + x.label + '</td><td>' +
+        r(x.close, 2) + '</td><td class="filt">' + x.filters + '</td><td class="' + x.ocls + '">' +
+        esc(x.outcome) + '</td></tr>';
+    }).join('');
+    return head +
+      '<div class="tablewrap"><table class="acts"><thead><tr><th>Date</th><th>Action</th><th>QQQ close</th>' +
+      '<th title="Trend · Momentum filter state after this change">Filters</th><th>Until next action</th></tr></thead>' +
+      '<tbody>' + rowsHtml + '</tbody></table></div>';
+  }
+
   function renderSignal(g) {
     var cls, action, sub, combine;
     if (blend === 'avg') {
@@ -110,6 +165,7 @@
           '<div class="bcombine">' + combine + '</div>' +
         '</div>' +
       '</div>' +
+      renderActions(g) +
       '<div class="meta">' + (g.live ? 'Last bars:' : 'Bars up to ' + esc(g.asOf) + ':') + '</div>' +
       '<div class="tablewrap"><table><thead><tr><th>Date</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th></tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody></table></div>';
