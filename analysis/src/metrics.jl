@@ -24,11 +24,11 @@ function compute_metrics(b::BacktestResult)
     tot = eq[end] / eq[1] - 1
     cagr = (eq[end] / eq[1])^(1 / years) - 1
     er = [eq[i] / eq[i - 1] - 1 for i in 2:n]               # equity daily returns
-    rf = (1 + b.rf_annual)^(1 / 252) - 1
-    μ = mean(er); σ = std(er)
-    sharpe = σ == 0 ? 0.0 : (μ - rf) / σ * sqrt(252)
-    downside = sqrt(mean(x -> min(x - rf, 0.0)^2, er))
-    sortino = downside == 0 ? 0.0 : (μ - rf) / downside * sqrt(252)
+    ex = er .- @view(b.rf[2:n])                              # excess over the day's cash yield
+    σ = std(er); σx = std(ex)                                # (identical when cash is flat)
+    sharpe = σx == 0 ? 0.0 : mean(ex) / σx * sqrt(252)
+    downside = sqrt(mean(x -> min(x, 0.0)^2, ex))
+    sortino = downside == 0 ? 0.0 : mean(ex) / downside * sqrt(252)
     mdd = max_drawdown(eq)
     calmar = mdd == 0 ? Inf : cagr / abs(mdd)
     pinv = mean(b.pos)

@@ -105,10 +105,30 @@
 
   // Net result of the active blend vs buy-and-hold over the panel window ending at
   // bar `i`, replicating src/engine.jl: the signal is lagged one trading day, a 5 bps
-  // cost is charged on turnover, and cash earns 4%/yr while out of the market.
-  var COST = 5e-4, RF_D = Math.pow(1.04, 1 / 252) - 1;
+  // cost is charged on turnover, and cash earns the 3-month T-bill yield in effect at the
+  // prior close while out of the market (flat 4%/yr only if the bundle carries no rates).
+  var COST = 5e-4;
+  var TBILL = (function () {                            // bundled yields (%), ascending dates
+    var dt = [], y = [];
+    (window.TBILL_DATA || '').split('\n').forEach(function (l) {
+      var f = l.split(','); if (f.length >= 2 && f[0]) { dt.push(f[0]); y.push(parseFloat(f[1])); }
+    });
+    return { date: dt, yld: y };
+  })();
+  // Annualized cash rate on each of the ascending `dates`: the last yield on or before the
+  // date, floored at 0 (mirrors rate_on in src/data.jl).
+  function cashRates(dates) {
+    var out = new Array(dates.length), j = 0, m = TBILL.date.length;
+    for (var k = 0; k < dates.length; k++) {
+      if (!m) { out[k] = 0.04; continue; }
+      while (j < m - 1 && TBILL.date[j + 1] <= dates[k]) j++;
+      out[k] = Math.max(TBILL.yld[j], 0) / 100;
+    }
+    return out;
+  }
   function windowStats(a, i) {
     var s = blend === 'avg' ? a.avg : a.either;
+    var cash = a.cash || (a.cash = cashRates(a.date));
     var asOf = a.date[i];
     var cutoff = (parseInt(asOf.slice(0, 4), 10) - actionYears()) + asOf.slice(4);
     var k0 = 0; while (k0 < i && a.date[k0] < cutoff) k0++;
@@ -116,11 +136,12 @@
     var eq = 1;
     for (var t = k0 + 1; t <= i; t++) {
       var r = a.close[t] / a.close[t - 1] - 1;
+      var rf = Math.pow(1 + cash[t - 1], 1 / 252) - 1;  // yield set at the prior close
       var p = s[t - 1], pp = t >= 2 ? s[t - 2] : 0;     // lagged position & turnover
-      eq *= (1 + p * r + (1 - p) * RF_D) * (1 - COST * Math.abs(p - pp));
+      eq *= (1 + p * r + (1 - p) * rf) * (1 - COST * Math.abs(p - pp));
     }
     var years = (new Date(asOf) - new Date(a.date[k0])) / 864e5 / 365.25;
-    return { years: years,
+    return { years: years, cashNow: cash[i], tbill: TBILL.date.length > 0,
              overlay: Math.pow(eq, 1 / years) - 1,
              bh: Math.pow(a.close[i] / a.close[k0], 1 / years) - 1 };
   }
@@ -133,7 +154,8 @@
     if (st) {
       head += '<div class="actstat">Net result: <b class="' + (st.overlay >= st.bh ? 'seg-good' : 'seg-bad') + '">' +
         fmtPct(st.overlay) + '/yr</b> vs buy‑and‑hold <b>' + fmtPct(st.bh) + '/yr</b> over the past ' +
-        st.years.toFixed(1) + ' yrs <span class="statnote">(annualized; signal lagged a day, 0.05% trade cost, cash earns 4%/yr while out)</span></div>';
+        st.years.toFixed(1) + ' yrs <span class="statnote">(annualized; signal lagged a day, 0.05% trade cost, cash earns ' +
+        (st.tbill ? 'the 3-month T-bill yield while out — ' + (100 * st.cashNow).toFixed(2) + '% now' : '4%/yr while out') + ')</span></div>';
     }
     if (!acts.length) {
       var st = blend === 'avg' ? (Math.round(g.avgExposure * 100) + '% QQQ') : (g.eitherLong ? 'in QQQ' : 'in cash');

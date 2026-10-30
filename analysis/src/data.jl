@@ -104,3 +104,60 @@ end
 subset(d::MarketData, i0::Integer, i1::Integer) =
     MarketData(d.ticker, d.date[i0:i1], d.open[i0:i1], d.high[i0:i1],
                d.low[i0:i1], d.close[i0:i1], d.volume[i0:i1])
+
+# ---- short-term interest rates (the cash yield / risk-free rate) ----
+
+"""
+A time-varying annualized rate (decimal), e.g. the 3-month T-bill yield. Passed as `rf_annual`
+to `run_backtest`, it is aligned to each backtest's own dates by as-of lookup, so the same
+series works unchanged on any windowed `subset` of the data.
+"""
+struct RateSeries
+    name::String
+    date::Vector{Date}
+    rate::Vector{Float64}
+end
+
+"""
+Annualized rate in effect on each of the (ascending) `dates`: the last observation on or
+before the date (the first observation, before the series starts), floored at 0 — cash
+held in a money fund doesn't earn the brief negative bill yields of March 2020.
+"""
+function rate_on(rs::RateSeries, dates::AbstractVector{Date})
+    out = Vector{Float64}(undef, length(dates)); j = 1; m = length(rs.date)
+    for (k, t) in enumerate(dates)
+        while j < m && rs.date[j + 1] <= t; j += 1; end
+        out[k] = max(rs.rate[j], 0.0)
+    end
+    return out
+end
+
+const TBILL_FILE = joinpath("rates", "TBILL_3M.csv")
+
+"""
+    load_tbill(; dir="data") -> RateSeries
+
+The daily 13-week US Treasury-bill yield (CBOE `^IRX`, the same rate as FRED DTB3), 1960 →,
+from `dir/rates/TBILL_3M.csv` (refresh with `update_tbill`). Use it as the cash yield and the
+Sharpe hurdle: `run_backtest(d, sig; rf_annual=load_tbill(dir=DATADIR))`.
+"""
+function load_tbill(; dir::AbstractString="data")
+    path = joinpath(dir, TBILL_FILE)
+    isfile(path) || error("No T-bill file at $path — fetch it with update_tbill(dir=\"$dir\").")
+    date = Date[]; rate = Float64[]
+    for line in Iterators.drop(eachline(path), 1)          # header: Date,Yield (percent)
+        f = split(line, ','); length(f) < 2 && continue
+        push!(date, Date(f[1])); push!(rate, parse(Float64, f[2]) / 100)
+    end
+    return RateSeries("3M T-bill", date, rate)
+end
+
+const _REPO_DATA = normpath(joinpath(@__DIR__, "..", "..", "data"))
+const _TBILL = Ref{Union{Nothing,RateSeries}}(nothing)
+
+"The repo's 3-month T-bill series (`data/rates/TBILL_3M.csv`), loaded once and cached — the
+default cash yield / risk-free rate of `run_backtest`."
+function tbill()
+    _TBILL[] === nothing && (_TBILL[] = load_tbill(dir=_REPO_DATA))
+    return _TBILL[]
+end

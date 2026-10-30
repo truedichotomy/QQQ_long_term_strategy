@@ -52,6 +52,14 @@ function show_signal(ticker; mode::Symbol=:auto)
         catch e
             @printf("⚠ could not fetch latest data (%s) — using existing local data\n", sprint(showerror, e))
         end
+        # Top up the T-bill series (cash yield for the performance stats). It never affects
+        # the signal, so a failure only warns — worded so the nightly job doesn't fail on it.
+        try
+            tb = update_tbill(dir=DATADIR)
+            @printf("↻ T-bill yield through %s: %.2f%%\n", tb.last, tb.latest)
+        catch e
+            @printf("⚠ T-bill rate refresh failed (%s) — cash keeps the last stored rates\n", sprint(showerror, e))
+        end
     else
         why = mode == :never ? "--no-fetch" :
               age < 3600     ? "pulled <1h ago" :

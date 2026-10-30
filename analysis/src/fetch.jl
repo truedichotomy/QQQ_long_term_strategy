@@ -182,8 +182,60 @@ function update_data(ticker::AbstractString; dir::AbstractString, min_days::Inte
     return append_to_archive(ticker, rows; dir=dir)
 end
 
-const _WEB_HEADER = "/* Bundled QQQ daily OHLCV (merged from data/) so the page shows a signal on open.\n" *
+const _WEB_HEADER = "/* Bundled QQQ daily OHLCV (merged from data/) so the page shows a signal on open, plus the\n" *
+                    "   3-month T-bill yield (data/rates/TBILL_3M.csv, %) that cash earns in the performance stats.\n" *
                     "   Generated — refresh with: julia analysis/fetch_data.jl (or node web/build_data.js). Do not hand-edit. */"
+
+# The T-bill rows the web app needs: the raw `Date,Yield` lines from the last one on or
+# before `from` onward (so an as-of lookup works from the first QQQ bar). Raw text, so the
+# Julia and node bundle writers stay byte-identical.
+function _web_tbill_lines(from::Date; dir::AbstractString=_REPO_DATA)
+    path = joinpath(dir, TBILL_FILE)
+    isfile(path) || return String[]
+    rows = collect(Iterators.drop(eachline(path), 1))
+    k = findlast(l -> l[1:10] <= string(from), rows)
+    return rows[something(k, 1):end]
+end
+
+"""
+    update_tbill(; dir, full=false) -> (n, first, last, latest)
+
+Refresh `dir/rates/TBILL_3M.csv`, the daily 13-week US T-bill yield (Yahoo `^IRX` — CBOE's
+quote of the same rate as FRED DTB3, in percent; FRED itself times out from scripts). This is
+the cash yield / risk-free rate `load_tbill` feeds to backtests and the web bundle. If the file
+exists, only the last ~3 months are pulled and merged in (new wins); `full=true`, or a missing
+file, re-downloads the whole 1960 → history. Refuses to write if the response looks truncated.
+"""
+function update_tbill(; dir::AbstractString, full::Bool=false)
+    path = joinpath(dir, TBILL_FILE)
+    full = full || !isfile(path)
+    q = full ? "period1=-315619200&period2=$(round(Int, time()))" : "range=3mo"
+    io = IOBuffer()
+    Downloads.download("https://query1.finance.yahoo.com/v8/finance/chart/%5EIRX?$q&interval=1d", io;
+                       headers = ["User-Agent" => _YAHOO_UA], timeout = 60)
+    json = String(take!(io))
+    occursin("\"error\":{", json) && error("Yahoo returned an error for ^IRX")
+    ts = _yarr(json, "timestamp"); cl = _yarr(json, "close")
+    byd = Dict{Date,Float64}()
+    if !full                                                   # keep the history, top up the tail
+        for line in Iterators.drop(eachline(path), 1)
+            f = split(line, ','); length(f) >= 2 && (byd[Date(f[1])] = parse(Float64, f[2]))
+        end
+    end
+    nnew = 0
+    for i in eachindex(ts)
+        y = _pf(cl[i]); isnan(y) && continue
+        byd[Date(unix2datetime(parse(Int, ts[i])))] = y; nnew += 1
+    end
+    nnew < (full ? 10_000 : 20) && error("only $nnew T-bill rows parsed — refusing to write")
+    dates = sort!(collect(keys(byd)))
+    mkpath(dirname(path))
+    open(path, "w") do f
+        println(f, "Date,Yield")
+        for t in dates; @printf(f, "%s,%.3f\n", t, byd[t]); end
+    end
+    return (n = length(dates), first = dates[1], last = dates[end], latest = byd[dates[end]])
+end
 
 # ---- market clock (US Eastern, DST-aware, no packages) + fetch-throttle helper ----
 function _et_offset(u::DateTime)
@@ -235,6 +287,8 @@ function write_web_bundle(d::MarketData; path::AbstractString, provisional=nothi
                     (provisional !== nothing && d.date[i] == provisional) ? ",P" : "")
         end
         println(io, "\";")
+        tb = _web_tbill_lines(d.date[1])
+        isempty(tb) || println(io, "window.TBILL_DATA=\"", join(tb, "\\n"), "\";")
     end
     return path
 end

@@ -49,7 +49,9 @@ drop in). End users never need to rebuild anything — they just run the signal,
 ## What's inside
 
 - `index.html` — the page (inline CSS).
-- `data.js` — the bundled QQQ history (`window.QQQ_DATA`, a compact CSV string). Generated.
+- `data.js` — the bundled QQQ history (`window.QQQ_DATA`, a compact CSV string) plus the daily
+  3-month T-bill yield (`window.TBILL_DATA`), which cash earns in the trade-actions panel's
+  "net result vs buy-and-hold" — the same accounting as the Julia engine. Generated.
 - `strategy.js` — the pure computation: CSV parse, date-merge/dedupe (`mergeFiles`,
   `mergeRows`), the indicators (SMA / TMA / CCI from OHLCV), the two component filters
   (`fastReentry`, `cciBandTmaSwitch`), and the blend. A faithful port of

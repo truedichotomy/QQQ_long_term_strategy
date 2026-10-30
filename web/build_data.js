@@ -23,8 +23,20 @@ const csv = rows.map(function (r) {
   var base = r.date + ',' + f2(r.o) + ',' + f2(r.h) + ',' + f2(r.l) + ',' + f2(r.c) + ',' + Math.round(r.v);
   return provisional[r.date] ? base + ',P' : base;
 }).join('\n');
+// The 3-month T-bill yield (cash earns it in the performance stats): raw `Date,Yield` lines from
+// the last one on or before the first QQQ bar onward — the same slice the Julia writer emits.
+const tpath = p.join(dir, 'rates', 'TBILL_3M.csv');
+let tline = '';
+if (fs.existsSync(tpath)) {
+  const tb = fs.readFileSync(tpath, 'utf8').split(/\r?\n/).slice(1).filter(Boolean);
+  let k = -1;
+  tb.forEach(function (l, j) { if (l.slice(0, 10) <= rows[0].date) k = j; });
+  tline = 'window.TBILL_DATA=' + JSON.stringify(tb.slice(Math.max(k, 0)).join('\n')) + ';\n';
+}
 fs.writeFileSync(p.join(__dirname, 'data.js'),
-  '/* Bundled QQQ daily OHLCV (merged from data/) so the page shows a signal on open.\n' +
+  '/* Bundled QQQ daily OHLCV (merged from data/) so the page shows a signal on open, plus the\n' +
+  '   3-month T-bill yield (data/rates/TBILL_3M.csv, %) that cash earns in the performance stats.\n' +
   '   Generated — refresh with: julia analysis/fetch_data.jl (or node web/build_data.js). Do not hand-edit. */\n' +
-  'window.QQQ_DATA=' + JSON.stringify(csv) + ';\n');
-console.log('wrote web/data.js: ' + rows.length + ' rows, ' + rows[0].date + ' … ' + rows[rows.length - 1].date);
+  'window.QQQ_DATA=' + JSON.stringify(csv) + ';\n' + tline);
+console.log('wrote web/data.js: ' + rows.length + ' rows, ' + rows[0].date + ' … ' + rows[rows.length - 1].date +
+  (tline ? ' + T-bill yields' : ''));
