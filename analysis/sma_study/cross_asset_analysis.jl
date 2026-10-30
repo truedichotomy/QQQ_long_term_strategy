@@ -12,7 +12,7 @@ include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
-const COST, RF = 5e-4, 0.04
+const COST, RF = 5e-4, tbill()
 const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
 const OUTDIR  = joinpath(dirname(@__DIR__), "results", "sma_study")
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)
@@ -58,8 +58,8 @@ end
 m0, m1 = date_range(d, Date(2005, 1, 1), d.date[end])
 win1y(b) = (s = rolling_compare(b.eq, bh_b.eq, 252; step=21); (s.return_win_rate, s.dd_win_rate))
 
-@printf("QQQ cross-asset study  (%s … %s, cash=%.0f%%/yr, cost=%.0f bps)\n\n",
-        d.date[1], d.date[end], 100RF, 1e4COST)
+@printf("QQQ cross-asset study  (%s … %s, cash = 3M T-bill, cost=%.0f bps)\n\n",
+        d.date[1], d.date[end], 1e4COST)
 @printf("%-24s | %-19s | %-19s | %s\n", "", "FULL 1999–2026", "MODERN 2005–2026", "vs QQQ B&H (1yr win)")
 @printf("%-24s | %8s %8s | %8s %8s | %6s %6s\n", "strategy", "CAGR", "maxDD", "CAGR", "maxDD", "ret%", "dd%")
 println("-"^96)

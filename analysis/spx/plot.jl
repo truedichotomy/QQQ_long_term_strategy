@@ -1,13 +1,13 @@
 # Chart: the QQQ blend overlay on a real daily index. Two stacked panels — growth
 # of $1 (log) and drawdown — buy & hold vs either-on vs avg. Pure base-Julia SVG.
 const TICKER, INDEXNAME = "SPX", "S&P 500"
-const SUBTITLE = "Same overlay as QQQ. On the S&amp;P it roughly matches buy &amp; hold on return while cutting drawdown by a third. Cash 4%/yr, 5 bps/trade."
+const SUBTITLE = "Same overlay as QQQ. On the S&amp;P it roughly matches buy &amp; hold on return while cutting drawdown by a third. Cash earns the 3M T-bill, 5 bps/trade."
 using Dates, Printf
 include(joinpath(dirname(@__DIR__), "QQQBacktest.jl")); using .QQQBacktest
 
 d = load_ticker(TICKER; dir=joinpath(dirname(dirname(@__DIR__)), "data"))
 n = length(d); yr = year.(d.date)
-bt(s) = run_backtest(d, s; cost=5e-4, rf_annual=0.04).eq
+bt(s) = run_backtest(d, s; cost=5e-4, rf_annual=tbill()).eq
 curves = [("buy & hold","#888888",bt(buyhold(d))),
           ("either-on","#d1242f",bt(blend_either_on(d))),
           ("avg (½)","#1f6feb",bt(blend_avg(d)))]

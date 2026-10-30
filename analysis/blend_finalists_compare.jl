@@ -3,7 +3,7 @@
 #   A) blend avg (½)   : exposure = (CCI + FR)/2 ∈ {0,½,1} — half-size on disagreement
 #   B) blend either-on : long if EITHER rule is long (max exposure)
 # Buy & hold is the common baseline. Same accounting as the rest of the study
-# (long/flat-or-fractional, 1-day lag, 5 bps turnover, cash 4%/yr, close-to-close).
+# (long/flat-or-fractional, 1-day lag, 5 bps turnover, cash = 3M T-bill, close-to-close).
 #
 #   julia --startup-file=no analysis/blend_finalists_compare.jl
 
@@ -11,7 +11,7 @@ include(joinpath(@__DIR__, "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
-const COST, RF = 5e-4, 0.04
+const COST, RF = 5e-4, tbill()
 const DATADIR = joinpath(dirname(@__DIR__), "data")
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)
 function slice_md(d::MarketData, i0, i1)
@@ -30,7 +30,7 @@ eqs   = [bt(d, s).eq for s in SIGS]
 ev(sig, a, b) = compute_metrics(bt(slice_md(d, a, b), sig[a:b]))
 win(f, t) = date_range(d, f, t)
 
-println("QQQ ", d.date[1], " … ", d.date[end], "   (cash 4%/yr, 5 bps/trade, 1-day lag)\n")
+println("QQQ ", d.date[1], " … ", d.date[end], "   (cash = 3M T-bill, 5 bps/trade, 1-day lag)\n")
 
 println("═"^96, "\n1. HEADLINE — full history\n", "═"^96)
 println(METRIC_HEADER); println("-"^96)

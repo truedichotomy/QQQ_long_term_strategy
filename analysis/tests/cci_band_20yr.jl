@@ -3,7 +3,7 @@
 # one (2016-2026)? For each window we show the -120/-40 pick vs B&H, then the
 # SELL sweep (buy fixed @ -40) and the BUY sweep (sell fixed @ -120).
 #
-# Same assumptions as run_analysis.jl: 1-day lag, 5 bps cost, cash 4%/yr.
+# Same assumptions as run_analysis.jl: 1-day lag, 5 bps cost, cash = 3M T-bill.
 # Signals are built on FULL history then sliced, so CCI(50) is warm and the
 # position state carried into each window reflects real prior history.
 #
@@ -14,7 +14,7 @@ using .QQQBacktest
 using Printf, Statistics, Dates
 
 const COST = 5e-4
-const RF   = 0.04
+const RF   = tbill()
 const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
 const SELL = -120     # fixed exit for the buy sweep
 const BUY  = -40      # fixed re-entry for the sell sweep

@@ -3,7 +3,7 @@
 #   Rule: sell to cash when CCI(50) < -120 (held fixed); re-enter when
 #   CCI(50) > entry_hi. Sweep entry_hi from -100 (snap back in on any bounce
 #   off the washout) to +100 (wait for strong positive momentum first).
-#   Same assumptions as run_analysis.jl (1-day lag, 5 bps cost, cash 4%/yr).
+#   Same assumptions as run_analysis.jl (1-day lag, 5 bps cost, cash = 3M T-bill).
 #
 #   julia --startup-file=no analysis/cci_band_buy_sweep.jl
 
@@ -12,7 +12,7 @@ using .QQQBacktest
 using Printf, Statistics, Dates
 
 const COST = 5e-4
-const RF   = 0.04
+const RF   = tbill()
 const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
 const SELL = -120   # exit threshold held fixed
 

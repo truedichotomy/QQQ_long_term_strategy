@@ -3,7 +3,7 @@
 #   Rule: sell to cash when CCI(50) < exit_lo; re-enter when CCI(50) > 0.
 #   Sweep exit_lo from -50 (twitchy) to -150 (only the deepest washouts).
 #   Re-entry held fixed at 0. Same assumptions as run_analysis.jl
-#   (1-day lag, 5 bps cost, cash 4%/yr).
+#   (1-day lag, 5 bps cost, cash = 3M T-bill).
 #
 #   julia --startup-file=no analysis/cci_band_sweep.jl
 
@@ -12,7 +12,7 @@ using .QQQBacktest
 using Printf, Statistics, Dates
 
 const COST = 5e-4
-const RF   = 0.04
+const RF   = tbill()
 const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
 
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)

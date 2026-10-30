@@ -5,7 +5,7 @@
 #      when close reclaims the 50-day SMA; ~10-day min hold. (long trend)
 # Buy & hold shown as the common baseline.
 #
-# Assumptions: long/flat, signals lagged 1 day, 5 bps turnover cost, cash 4%/yr,
+# Assumptions: long/flat, signals lagged 1 day, 5 bps turnover cost, cash = 3M T-bill,
 # all P&L close-to-close. Signals built on full history then sliced per window.
 #
 #   julia --startup-file=no analysis/finalists_compare.jl
@@ -14,7 +14,7 @@ include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
-const COST, RF = 5e-4, 0.04
+const COST, RF = 5e-4, tbill()
 const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)
 function slice_md(d::MarketData, i0, i1)
@@ -32,7 +32,7 @@ eqs   = [bt(d, s).eq for s in SIGS]               # full-history equity curves
 ev(sig, a, b) = compute_metrics(bt(slice_md(d, a, b), sig[a:b]))
 win(f, t) = date_range(d, f, t)
 
-println("QQQ ", d.date[1], " … ", d.date[end], "   (cash 4%/yr, 5 bps/trade, 1-day lag)\n")
+println("QQQ ", d.date[1], " … ", d.date[end], "   (cash = 3M T-bill, 5 bps/trade, 1-day lag)\n")
 
 # ── 1. Headline, full history ────────────────────────────────────────────────
 println("═"^96, "\n1. HEADLINE — full history\n", "═"^96)

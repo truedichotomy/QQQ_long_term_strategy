@@ -6,7 +6,7 @@ include(joinpath(@__DIR__, "QQQBacktest.jl")); using .QQQBacktest
 
 const DATADIR = joinpath(dirname(@__DIR__), "data")
 q = load_ticker("QQQ"; dir=DATADIR)
-pos = run_backtest(q, blend_either_on(q); cost=5e-4, rf_annual=0.04).pos
+pos = run_backtest(q, blend_either_on(q); cost=5e-4, rf_annual=tbill()).pos
 
 # contiguous out-spells (pos==0), keep the meaningful ones (>= MINLEN trading days)
 const MINLEN = 20
@@ -30,7 +30,11 @@ function asof(d, t)
     k==0 ? NaN : d.close[k]
 end
 spanret(d, t0, t1) = (c0=asof(d,t0); c1=asof(d,t1); (isnan(c0)||c0==0 || d.date[1]>t0) ? NaN : c1/c0-1)
-cashret(t0,t1) = (1.04)^(Dates.value(t1-t0)/365.25) - 1
+# cash = a T-bill account accruing the 3M yield in effect at each prior close (as the engine does)
+const CASHIDX = let y = rate_on(tbill(), q.date)
+    cumprod([1.0; [(1 + y[i-1])^(1/252) for i in 2:length(y)]])
+end
+cashret(t0,t1) = CASHIDX[searchsortedlast(q.date,t1)] / CASHIDX[searchsortedlast(q.date,t0)] - 1
 
 println("QQQ either-on OUT-spells (≥ $MINLEN trading days) — return of each alt over the same window:")
 @printf("%-23s %4s %7s | %6s %7s %7s %7s %7s %7s %7s\n",
@@ -55,6 +59,6 @@ function rowstat(name, v)
     comp = prod(1 .+ v)-1
     @printf("%-18s %9.1f%% %9.0f%% %11.1f%%\n", name, 100median(v), 100mean(v.>0), 100comp)
 end
-rowstat("cash (4%/yr)", aggc)
+rowstat("cash (3M T-bill)", aggc)
 for (t,desc) in alts; rowstat("$t ($desc)", agg[t]); end
 @printf("%-18s %9.1f%% %9.0f%%\n","QQQ (what you dodged)", 100median(aggq), 100mean(aggq.>0))

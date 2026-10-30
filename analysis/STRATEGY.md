@@ -10,26 +10,29 @@ Two variants:
 - **avg (½-size)** — hold the *average* of the two filters (0 / 50 / 100 % invested).
   Smoothest ride, cushions every crash type, but ~12 trades/yr and fractional positions.
 
-| (1999–2026, cash 4 %/yr, 5 bps/trade) | **either-on** | avg (½) | buy & hold |
+| (1999-03 → 2026-10, cash earns the 3-month T-bill, 5 bps/trade) | **either-on** | avg (½) | buy & hold |
 |---|---:|---:|---:|
-| CAGR | **15.3 %** | 13.7 % | 10.2 % |
-| Growth of \$1 | **48×** | 34× | 14× |
-| Worst drawdown | −37 % | **−33 %** | −83 % |
-| Sharpe / Sortino / Calmar | 0.59 / 0.84 / 0.41 | **0.61 / 0.85 / 0.42** | 0.35 / 0.50 / 0.12 |
-| Out-of-sample 2004+ CAGR / maxDD | **14.9 % / −32 %** | 13.2 % / −25 % | 14.5 % / −54 % |
+| CAGR | **14.8 %** | 12.9 % | 10.0 % |
+| Growth of \$1 | **45×** | 29× | 14× |
+| Worst drawdown | −38 % | **−32 %** | −83 % |
+| Sharpe / Sortino / Calmar | 0.66 / 0.94 / 0.39 | **0.68 / 0.96 / 0.40** | 0.42 / 0.60 / 0.12 |
+| Out-of-sample 2004+ CAGR / maxDD | **14.4 % / −33 %** | 12.4 % / −27 % | 14.2 % / −54 % |
 | Trades per year | **~3** | ~12 | 0 |
-| Worst 10-yr return | **+5 %/yr** | +5 %/yr | −8 %/yr |
+| Worst 10-yr return | **+5 %/yr** | +4 %/yr | −8 %/yr |
 
 *Signals are computed at the close and acted on the next session (no look-ahead); all P&L
-is close-to-close. Full methodology and the strategies that lost are in [README.md](README.md).*
+is close-to-close. Cash earns the actual daily 3-month T-bill yield (it averaged ~2 % over
+this span), which is also the Sharpe/Sortino hurdle — earlier versions of this table assumed
+a flat 4 %, which flattered the edge by ~0.2–0.5 pp/yr (§3d). Full methodology and the
+strategies that lost are in [README.md](README.md).*
 
-**Where it stands today** (run `julia analysis/signal.jl` for live status):
+**Where it stands** (run `julia analysis/signal.jl` for live status):
 
 ```
-QQQ as of 2026-06-23:  close 719   SMA-50 698 > SMA-200 630   CCI(40) 27
-  Trend filter (SMA 50/200 fast-reentry):    IN  since 2025-06-30
-  Momentum filter (CCI(40) -100/0 + TMA):    IN  since 2026-04-08
-  ► either-on:  ▲ BUY / HOLD — 100% QQQ        ► avg: 100% QQQ
+QQQ as of 2026-10-29:  close 715   SMA-50 725 > SMA-200 679   CCI(40) -61
+  Trend filter (SMA 50/200 fast-reentry):    IN   since 2025-06-30
+  Momentum filter (CCI(40) -100/0 + TMA):    OUT  since 2026-10-23
+  ► either-on:  ▲ BUY / HOLD — 100% QQQ        ► avg: ◐ HALF — 50% QQQ
 ```
 
 ---
@@ -60,7 +63,8 @@ avg (½-size):
 
 `either-on` maximizes return and minimizes effort; `avg` trades some return and turnover
 for the smoothest, most consistent drawdown control. They are risk-adjusted equivalents
-(Calmar 0.41 vs 0.42) — the choice is return-and-simplicity vs smoothness (see §3).
+(Calmar 0.39 vs 0.40, Sharpe 0.66 vs 0.68) — the choice is return-and-simplicity vs
+smoothness (see §3).
 
 ---
 
@@ -79,7 +83,7 @@ Two moving averages of QQQ's daily **close** define the regime:
 ```
 
 It reacts to the *long* trend, lagging turns by design so it isn't faked out by wiggles.
-Standalone it returns ~14.4 %/yr at −36 % drawdown over 1999–2026 — the strongest single
+Standalone it returns ~13.7 %/yr at −36 % drawdown over 1999–2026 — the strongest single
 filter we found, and the flagship of the earlier SMA study (`analysis/sma_study/`). Its
 one structural blind spot is the fast crash.
 
@@ -117,15 +121,15 @@ consistent than either filter alone.
 
 | regime | span | buy & hold | avg (½) | either-on |
 |---|---|---:|---:|---:|
-| Dot-com crash | 2000–2002 | −83 % / −83 % | **−25 % / −33 %** | −29 % / −36 % |
-| Global financial crisis | 2007–2009 | −53 % / −54 % | **−25 % / −25 %** | −30 % / −32 % |
-| 2009–2020 bull | 2009–2020 | **+820 %** / −23 % | +397 % / −16 % | +537 % / −20 % |
+| Dot-com crash | 2000–2002 | −83 % / −83 % | **−26 % / −32 %** | −30 % / −36 % |
+| Global financial crisis | 2007–2009 | −53 % / −54 % | **−26 % / −26 %** | −31 % / −33 % |
+| 2009–2020 bull | 2009–2020 | **+820 %** / −23 % | +370 % / −17 % | +530 % / −20 % |
 | COVID crash | Feb–Mar 2020 | −28 % / −29 % | **−20 % / −21 %** | −28 % / −29 % |
-| 2022 bear | 2021–2022 | −36 % / −36 % | **−14 % / −14 %** | −20 % / −20 % |
+| 2022 bear | 2021–2022 | −36 % / −36 % | **−15 % / −16 %** | −21 % / −21 % |
 | 2023–2026 recovery | 2022–2026 | +184 % / −23 % | +128 % / −15 % | +156 % / −23 % |
 
 This is the structural fork between the two variants. **`avg` cushions every crash type,
-including fast ones** (COVID −21 %, 2022 −14 %), because whenever one filter is caught off
+including fast ones** (COVID −21 %, 2022 −16 %), because whenever one filter is caught off
 guard the other has usually exited, so you're only half-exposed. **`either-on` keeps the
 trend filter's fast-crash blind spot** (COVID −29 %, same as buy-and-hold) — the price it
 pays for staying fully invested and out-returning everything else.
@@ -134,27 +138,50 @@ pays for staying fully invested and out-returning everything else.
 
 | horizon | buy & hold | avg (½) | either-on |
 |---|---:|---:|---:|
-| 1 year | −65 / +16 / +118 | −17 / +12 / +96 | −19 / +13 / +118 |
-| 3 years | −39 / +13 / +34 | −8 / +12 / +31 | −10 / +13 / +34 |
-| 5 years | −20 / +14 / +28 | −0 / +12 / +26 | −1 / +13 / +28 |
-| 10 years | −8 / +12 / +21 | **+5** / +11 / +20 | **+5** / +13 / +22 |
+| 1 year | −65 / +16 / +118 | −17 / +11 / +96 | −19 / +13 / +118 |
+| 3 years | −39 / +14 / +34 | −9 / +11 / +31 | −11 / +13 / +34 |
+| 5 years | −20 / +14 / +28 | −1 / +11 / +25 | −1 / +13 / +28 |
+| 10 years | −8 / +13 / +21 | **+4** / +10 / +20 | **+5** / +12 / +22 |
 
 Read the **worst** column: buy-and-hold has had losing 1-, 3-, 5- and 10-year stretches;
-neither blend has had a losing 5- or 10-year window in 27 years, and `either-on`'s medians
-match or beat buy-and-hold's. You eliminate the catastrophic tail without surrendering the
-middle.
+neither blend has had a losing 10-year window in 27 years, and their worst 5-year windows
+were roughly flat (−1 %/yr) against buy-and-hold's −20 %/yr. The price is in the middle:
+`either-on`'s medians run ~1 pp/yr below buy-and-hold's, `avg`'s ~3 pp. You eliminate the
+catastrophic tail at a modest cost to the typical outcome.
 
 ### 3c. Win-rate vs buy & hold (rolling windows: return-beat % / shallower-drawdown %)
 
 | | 1 mo | 1 yr | 5 yr |
 |---|---:|---:|---:|
-| avg (½) | 39 / 82 | 31 / **90** | 54 / **99** |
-| either-on | 36 / 72 | 38 / 73 | **59** / 87 |
+| avg (½) | 38 / 84 | 30 / **88** | 52 / **89** |
+| either-on | 36 / 70 | 43 / 66 | **60** / 77 |
 
-The dependable edge is **drawdown**: `avg` is shallower than buy-and-hold in ~99 % of
-rolling 3–5-year windows. On raw return both mostly trail buy-and-hold in short windows
-(the full-sample CAGR edge comes from side-stepping deep bears plus earning cash yield
-while out), but `either-on` pulls ahead on return at longer horizons (59 % of 5-yr windows).
+The dependable edge is **drawdown**: `avg` is shallower than buy-and-hold in ~90 % of
+rolling 1–5-year windows. (Earlier versions of this doc said ~99 %: that figure credited cash
+a flat 4 % through the zero-rate 2010s, which padded the half-in-cash blend through ordinary
+corrections. With real T-bill yields it is ~90 % — still the most consistent risk reduction
+tested, but not near-certain.) On raw return both mostly trail buy-and-hold in short windows
+(the full-sample CAGR edge comes from side-stepping deep bears), but `either-on` pulls ahead
+on return at longer horizons (60 % of 5-yr windows).
+
+### 3d. Cash and interest rates
+
+Every number here credits cash the **actual daily 3-month T-bill yield** (`data/rates/`;
+0 – 6 %, averaging 2.0 % over 1999–2026, ~4 % today) and uses it as the Sharpe hurdle.
+`analysis/rates_review.jl` compares that with the old flat 4 % and with 0 % cash:
+
+- **The edge is crash avoidance, not interest.** Versus earning nothing in cash, T-bills add
+  only ~0.3 pp/yr to `either-on` and ~0.6 pp/yr to `avg`. The flat-4 % assumption overstated
+  the edge over buy-and-hold by ~0.2 pp/yr (`either-on`) and ~0.5 pp/yr (`avg`).
+- **The edge was earned outside zero-rate periods.** On days when bills paid < 1 % (43 % of
+  the record) `either-on` returned 15.6 %/yr vs buy-and-hold's 16.6 %; at 1–3 % it was 9.3 % vs
+  3.8 %, and at ≥ 3 % 17.9 % vs 6.4 %. Partly coincidence of when the bears happened (2000–02
+  and 2022 came at ≥ 1 % rates), partly structural: in a zero-rate world sitting out pays
+  nothing. The weak spot is the 2010s ZIRP decade (`either-on` 13.6 %/yr vs 16.5 %).
+- **Rates don't change the choice of variant**: `either-on` out-returns `avg` in every rate
+  band; `avg` wins only on drawdown.
+- QQQ prices here exclude dividends (~0.6 %/yr); adding them lifts every line by about that
+  much and leaves the edges unchanged.
 
 ---
 
@@ -168,18 +195,21 @@ out-of-sample as adaptively re-choosing among the building blocks each year.
 
 | OOS 2004–2026 | CAGR | maxDD | Calmar |
 |---|---:|---:|---:|
-| buy & hold | 14.5 % | −54 % | 0.27 |
-| **either-on (fixed)** | **14.9 %** | −32 % | 0.47 |
-| avg (fixed) | 13.2 % | **−25 %** | **0.53** |
-| adaptive walk-forward (re-picks yearly) | 13.1 % | −29 % | 0.46 |
+| buy & hold | 14.2 % | −54 % | 0.27 |
+| **either-on (fixed)** | **14.4 %** | −33 % | 0.44 |
+| avg (fixed) | 12.4 % | **−27 %** | **0.46** |
+| adaptive walk-forward (re-picks yearly) | 12.2 % | −27 % | 0.46 |
 
-`analysis/blend_walkforward.jl`. Two findings, both of which **strengthen** confidence:
+`analysis/blend_walkforward.jl`. Two findings:
 
-1. **Committing to a fixed blend beats adaptively re-selecting** among {B&H, trend, momentum,
-   avg, either-on} each year (Calmar 0.47 / 0.53 vs 0.46) — and the adaptive selector *only
-   ever picks a blend*, never a standalone. The combination isn't overfit.
+1. **Committing to a fixed blend does as well as adaptively re-selecting** among {B&H, trend,
+   momentum, avg, either-on} each year: fixed `avg` matches the adaptive selector's Calmar
+   (0.46) with slightly more return, and fixed `either-on` trades a little Calmar (0.44) for
+   ~2 pp/yr more return. The adaptive selector *only ever picks a blend* (avg 82 % / either-on
+   18 % of days), never a standalone — the combination isn't overfit. (Under the old flat-4 %
+   cash the fixed blends beat adaptive outright; real T-bills narrow that to a tie.)
 2. **Out-of-sample (dot-com in training), `either-on` still edges buy-and-hold on return**
-   (14.9 % vs 14.5 %) at ~half the drawdown — a far better risk-adjusted ride.
+   (14.4 % vs 14.2 %) at ~60 % of its drawdown — a far better risk-adjusted ride.
 
 ---
 
@@ -187,8 +217,8 @@ out-of-sample as adaptively re-choosing among the building blocks each year.
 
 We ran the underlying 50/200 filter on all eight ETFs in the dataset. The drawdown
 protection is **universal**; the return boost is **not** — it only *added* return on
-high-momentum, deep-crash assets (QQQ, energy, long bonds) and *hurt* choppier indices like
-small-caps (IWM −4.5 pp/yr) and the Dow (DIA −2.7 pp). QQQ is the standout equity beneficiary
+high-momentum, deep-crash assets (QQQ, energy, long bonds, TIPS) and *hurt* choppier indices
+like small-caps (IWM −5.1 pp/yr) and the Dow (DIA −3.2 pp). QQQ is the standout equity beneficiary
 precisely because it trends hard and crashes hard — exactly what these filters exploit. Using
 *other* ETFs to confirm QQQ timing only reduced return; QQQ's own price already encodes the
 regime. (`analysis/sma_study/cross_asset_analysis.jl`.)
@@ -213,8 +243,9 @@ Execute changes at the next session.
 ### Where to hold each state
 - **Long:** QQQ, or **QQQM** (same index, lower 0.15 % fee). **Do not** use leveraged ETFs
   (TQQQ) — leverage amplifies whipsaw and breaks the risk profile.
-- **Cash:** a money-market fund, T-bills, or HYSA earning ~4 % — *not* idle 0 % cash; part of
-  the return edge depends on earning yield while out (the drawdown protection does not).
+- **Cash:** a money-market fund, T-bills, or HYSA — *not* idle 0 % cash. The backtest credits
+  the actual 3-month T-bill yield; that interest is a small part of the edge (~0.3 pp/yr for
+  `either-on`, ~0.6 for `avg`), and the drawdown protection doesn't depend on it.
 
 ### Account & tax
 `either-on` realizes ~3 taxable events/year — quite tax-friendly. `avg` realizes ~12 plus
@@ -242,6 +273,7 @@ julia analysis/signal.jl                        # both blends' call + breakdown;
 julia analysis/fetch_data.jl                    # explicit fetch from a free source (last 10 trading days)
 julia analysis/blend_finalists_compare.jl       # the full side-by-side battery (either-on vs avg vs B&H)
 julia analysis/blend_walkforward.jl             # §4 out-of-sample validation
+julia analysis/rates_review.jl                  # §3d real T-bill cash vs flat 4% vs 0%, by era / rate regime
 julia analysis/build_blend_pages.jl             # the per-strategy execution webpages
 julia analysis/plot_blend_finalists.jl          # the §3 equity + drawdown chart
 # ── component studies ──

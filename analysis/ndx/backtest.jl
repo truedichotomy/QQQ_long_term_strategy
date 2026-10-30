@@ -14,8 +14,8 @@ sigs = ["buy & hold"=>buyhold(d), "trend (50/200 fast-reentry)"=>trend,
         "momentum (CCI40/TMA200)"=>mom, "either-on (adopted)"=>blend_either_on(d),
         "avg (½-size)"=>blend_avg(d)]
 
-function table(rf)
-    @printf("\n========  cash %.0f%%/yr, 5 bps/trade  ========\n", 100rf)
+function table(rf, label)
+    @printf("\n========  %s, 5 bps/trade  ========\n", label)
     println(METRIC_HEADER)
     res = Dict{String,Any}()
     for (name,s) in sigs
@@ -25,8 +25,8 @@ function table(rf)
     end
     res
 end
-res = table(0.04)
-table(0.00); table(0.05)
+res = table(tbill(), "cash earns the 3M T-bill")
+table(0.00, "cash earns 0% (floor case)")
 
 bh = res["buy & hold"]; dd = drawdown_series(bh.eq); itr = argmin(dd); ipk = argmax(bh.eq[1:itr])
 @printf("\nBuy & hold worst drawdown: %.1f%%  peak %s (%.0f) -> trough %s (%.0f)\n",

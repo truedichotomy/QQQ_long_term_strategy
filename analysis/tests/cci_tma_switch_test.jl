@@ -3,7 +3,7 @@
 # the TMA switch and the confirmation each add. Compared against the prior pick
 # (CCI(50) -120/-40) and Standard fast-reentry across the key windows.
 #
-# Same assumptions: 1-day lag, 5 bps cost, cash 4%/yr. Signals built on full
+# Same assumptions: 1-day lag, 5 bps cost, cash = 3M T-bill. Signals built on full
 # history then sliced. The switch fires when TMA(200) is below its value `lb`
 # days ago; entry/exit each need `confirm` consecutive days.
 #
@@ -13,7 +13,7 @@ include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
-const COST, RF = 5e-4, 0.04
+const COST, RF = 5e-4, tbill()
 const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)
 

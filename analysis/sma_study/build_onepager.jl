@@ -11,7 +11,7 @@ using .QQQBacktest
 using Printf, Statistics, Dates
 
 const RES = joinpath(dirname(@__DIR__), "results", "sma_study"); const OUT = joinpath(RES, "QQQ_strategy_1page.html")
-const COST, RF = 5e-4, 0.04
+const COST, RF = 5e-4, tbill()
 d = load_ticker("QQQ"; dir=joinpath(dirname(dirname(@__DIR__)), "data")); N = length(d)
 bt(s) = run_backtest(d, s; cost=COST, rf_annual=RF)
 bh = bt(buyhold(d)); st = bt(fast_reentry(d)); cn = bt(sma_cross(d; fast=50, slow=200))
@@ -88,13 +88,13 @@ code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:8.8px;background:#
     <h2>What to know</h2>
     <ul>
       <li>Edge is concentrated in <b>bear markets</b>; it trails buy-and-hold in sustained bulls.</li>
-      <li>Hold cash in <b>T-bills / money-market</b> (~4%) — part of the return edge depends on it.</li>
+      <li>Hold cash in <b>T-bills / money-market</b> (earning the T-bill rate) — part of the return edge depends on it.</li>
       <li>Use a <b>tax-advantaged account</b> (switches realize gains). Use QQQ/QQQM, not leveraged TQQQ.</li>
       <li>Won't dodge <b>sudden one-month crashes</b> (COVID); whipsaws in choppy sideways markets.</li>
     </ul>
   </div>
 </div>
-<div class="foot">Historical backtest of mechanical rules on daily QQQ, 1999–2026; cash earns 4%/yr, 5 bps cost per switch, signals acted next session (no look-ahead). <b>Not investment advice; past performance does not guarantee future results.</b> Full report: QQQ_strategy.html · methodology: analysis/STRATEGY.md.</div>
+<div class="foot">Historical backtest of mechanical rules on daily QQQ, 1999–2026; cash earns the 3M T-bill yield, 5 bps cost per switch, signals acted next session (no look-ahead). <b>Not investment advice; past performance does not guarantee future results.</b> Full report: QQQ_strategy.html · methodology: analysis/STRATEGY.md.</div>
 </body></html>"""
 write(OUT, html)
 println("Wrote ", OUT)

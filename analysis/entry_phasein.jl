@@ -1,7 +1,7 @@
 # How long should a DCA phase-in be, if each tranche is then managed by the avg
 # overlay? For every historical "your situation" entry (signal IN, price near its
 # high), deploy capital in equal monthly tranches over a phase-in of P months
-# (P=0 = lump sum); undeployed cash earns 4%/yr, deployed capital follows the avg
+# (P=0 = lump sum); undeployed cash earns the 3M T-bill yield, deployed capital follows the avg
 # overlay. Measure, over the 3 years from entry: the worst drawdown on the WHOLE
 # portfolio (entry-risk) and the total return (the cost of phasing in slowly).
 using Dates, Printf, Statistics
@@ -13,8 +13,8 @@ q(x,p) = quantile(x,p)
 
 function study(tk; W=756, MONTH=21)
     d = load_ticker(tk; dir=joinpath(dirname(@__DIR__), "data")); n = length(d)
-    eqa = run_backtest(d, blend_avg(d); cost=5e-4, rf_annual=0.04).eq
-    eo  = run_backtest(d, blend_either_on(d); cost=5e-4, rf_annual=0.04)
+    eqa = run_backtest(d, blend_avg(d); cost=5e-4, rf_annual=tbill()).eq
+    eo  = run_backtest(d, blend_either_on(d); cost=5e-4, rf_annual=tbill())
     cmax = accumulate(max, d.close)
     Ps = [0,1,2,3,6,12]
     maxlag = maximum(Ps)*MONTH

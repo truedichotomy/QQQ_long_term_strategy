@@ -2,7 +2,7 @@
 #
 #   Rule: sell to cash when CCI(50) falls below -120; do not buy back until
 #   CCI(50) climbs back above 0. Long/flat, signals lagged one day, 5 bps
-#   turnover cost, cash earns 4%/yr (same assumptions as run_analysis.jl).
+#   turnover cost, cash earns the 3M T-bill yield (same assumptions as run_analysis.jl).
 #
 #   julia --startup-file=no analysis/cci_band_test.jl
 #
@@ -13,7 +13,7 @@ using .QQQBacktest
 using Printf, Statistics, Dates
 
 const COST = 5e-4
-const RF   = 0.04
+const RF   = tbill()
 const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
 
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)

@@ -11,7 +11,7 @@ using .QQQBacktest
 using Printf, Statistics, Dates
 
 const RES = joinpath(@__DIR__, "results")
-const COST, RF = 5e-4, 0.04
+const COST, RF = 5e-4, tbill()
 d = load_ticker("QQQ"; dir=joinpath(dirname(@__DIR__), "data")); N = length(d)
 bt(s) = run_backtest(d, s; cost=COST, rf_annual=RF)
 function slice_md(d::MarketData, i0, i1)
@@ -95,6 +95,11 @@ end
 oos_a = 1261
 oos(eq) = (es = eq[oos_a:N] ./ eq[oos_a]; yrs = Dates.value(d.date[N]-d.date[oos_a])/365.25; (cagr=es[end]^(1/yrs)-1, dd=max_drawdown(es)))
 
+# figures quoted in the copy — computed, so the nightly rebuild keeps them true
+const MEIT, MAVG = compute_metrics(bt(EIT)), compute_metrics(bt(AVG))
+mult(m) = round(Int, m.total_return + 1)
+const AVG_DDWIN = let ms = Dict(multiscale(bt(AVG).eq, bt(BH).eq)); [ms[k].dd_win_rate for k in ("3yr", "5yr")] end
+
 # ── page builder ───────────────────────────────────────────────────────────────
 function build_page(file, key)
     sig   = key == :either ? EIT : AVG
@@ -164,8 +169,8 @@ function build_page(file, key)
         whatknow = """
 <li><b>It does not cushion sudden one-month crashes.</b> In COVID it drew down −29% (same as buy &amp; hold) because the trend filter stays "in" through a fast plunge. This is the price of staying invested for the extra return.</li>
 <li><b>Its protection is for slow, grinding bears</b> (2000–02, 2008, 2022) where at least one filter exits and stays out.</li>
-<li>Edge is concentrated in those bears; in calm bull years it trails buy &amp; hold on return but earns ~4% in cash during its rare exits.</li>"""
-        verdict = "Maximum terminal wealth (49× vs 34× for the average blend) with the least possible maintenance — about 3 trades a year and no fractional positions. The trade-off is buy-&amp;-hold-level drawdowns in fast crashes. Best for long-horizon money you won't need to draw on soon."
+<li>Edge is concentrated in those bears; in calm bull years it trails buy &amp; hold on return, earning only the T-bill yield in cash during its rare exits.</li>"""
+        verdict = "Maximum terminal wealth ($(mult(MEIT))× vs $(mult(MAVG))× for the average blend) with the least possible maintenance — about 3 trades a year and no fractional positions. The trade-off is buy-&amp;-hold-level drawdowns in fast crashes. Best for long-horizon money you won't need to draw on soon."
     else
         rulehtml = """
 <p><b>Your QQQ weight is the average of two yes/no filters</b> — 100% if both say "in," <b>50% if only one</b>, 0% if neither:</p>
@@ -176,9 +181,9 @@ function build_page(file, key)
 <p>Each day, set your QQQ allocation to <b>0% / 50% / 100%</b> per the two filters and hold the rest in cash. This changes more often — about <b>12 times per year</b>, including the half-steps.</p>"""
         whatknow = """
 <li><b>It cushions every crash type, including fast ones</b> — when one filter is caught off-guard, the other has usually exited, so you're only half-exposed (COVID −21% vs −29% for buy &amp; hold).</li>
-<li>Its drawdown has been shallower than buy &amp; hold in <b>~99% of rolling 3–5 year windows</b> — the most consistent risk reduction of anything tested.</li>
+<li>Its drawdown has been shallower than buy &amp; hold in <b>$(round(Int, 100minimum(AVG_DDWIN)))–$(round(Int, 100maximum(AVG_DDWIN)))% of rolling 3–5 year windows</b> — the most consistent risk reduction of anything tested.</li>
 <li>The cost is real: <b>~12 changes/year</b> and <b>fractional (50%) positions</b> to rebalance — more effort and more taxable events than the either-on blend.</li>"""
-        verdict = "The smoothest ride and the most reliable drawdown control, with protection against fast <i>and</i> slow crashes. You give up ~1.5 pp/yr of return and accept fractional positions and 4× the turnover. Best if you're near drawing on the money (sequence-of-returns risk) or would otherwise panic-sell in a fast crash."
+        verdict = "The smoothest ride and the most reliable drawdown control, with protection against fast <i>and</i> slow crashes. You give up ~$(round(100(MEIT.cagr - MAVG.cagr); digits=1)) pp/yr of return and accept fractional positions and $(round(Int, MAVG.ntrades / MEIT.ntrades))× the turnover. Best if you're near drawing on the money (sequence-of-returns risk) or would otherwise panic-sell in a fast crash."
     end
 
     html = """<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -269,7 +274,7 @@ $hprows
 <ul>
 <li><b>Daily routine:</b> after the close, check the two filters and set your QQQ weight per the rule above. Trade at the next session. $(key==:either ? "Exits are rare — checking a few times a week is plenty." : "Changes cluster around market turns; check daily in volatile periods.")</li>
 <li><b>Where to hold the asset:</b> QQQ, or <b>QQQM</b> (same index, lower 0.15% fee). <b>Do not</b> use leveraged ETFs (TQQQ) — leverage breaks the risk profile.</li>
-<li><b>Where to hold cash:</b> a money-market fund, T-bills, or HYSA earning ~4%. Part of the return edge depends on earning yield while out; the drawdown protection does not.</li>
+<li><b>Where to hold cash:</b> a money-market fund, T-bills, or HYSA earning about the T-bill rate. The backtest credits cash the actual 3-month T-bill yield (averaging ~2% since 1999); that yield is a small part of the return edge, and the drawdown protection does not depend on it.</li>
 <li><b>Account &amp; tax:</b> $(key==:either ? "at ~3 trades/year this is quite tax-friendly, but a tax-advantaged account (IRA/Roth/401k) is still cleanest." : "at ~12 trades/year plus fractional rebalances this realizes many short-term events — strongly prefer a tax-advantaged account (IRA/Roth/401k).")</li>
 <li><b>Discipline:</b> follow the rule mechanically. The hard moments are selling when the market still feels fine and re-buying while it still feels scary.</li>
 </ul>
@@ -279,7 +284,7 @@ $whatknow
 <li>In a relentless bull market you will trail buy &amp; hold — the protection only pays off in the next deep bear.</li>
 </ul>
 
-<div class="foot">Historical backtest of mechanical rules on daily QQQ, 1999–2026. Long/flat$(key==:either ? "" : " (or half)"), cash earns 4%/yr, 5 bps cost per switch, signals computed at the close and acted the next session (no look-ahead); all returns close-to-close. Both component rules validated out-of-sample (the fixed parameters beat adaptive re-optimization). <b>This is not investment advice and not a prediction. Past performance does not guarantee future results.</b> Methodology: analysis/STRATEGY.md · reproduce: <code>julia analysis/blend_finalists_compare.jl</code>.</div>
+<div class="foot">Historical backtest of mechanical rules on daily QQQ, 1999–2026. Long/flat$(key==:either ? "" : " (or half)"), cash earns the 3M T-bill yield, 5 bps cost per switch, signals computed at the close and acted the next session (no look-ahead); all returns close-to-close. Both component rules validated out-of-sample (the fixed parameters beat adaptive re-optimization). <b>This is not investment advice and not a prediction. Past performance does not guarantee future results.</b> Methodology: analysis/STRATEGY.md · reproduce: <code>julia analysis/blend_finalists_compare.jl</code>.</div>
 </div></body></html>"""
     write(joinpath(RES, file), html)
     println("Wrote ", joinpath(RES, file))

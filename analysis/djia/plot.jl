@@ -6,7 +6,7 @@ include(joinpath(dirname(@__DIR__), "QQQBacktest.jl")); using .QQQBacktest
 
 d = load_ticker("DJI"; dir=joinpath(dirname(dirname(@__DIR__)), "data"))
 n = length(d); yr = year.(d.date)
-bt(s) = run_backtest(d, s; cost=5e-4, rf_annual=0.04).eq
+bt(s) = run_backtest(d, s; cost=5e-4, rf_annual=tbill()).eq
 curves = [("buy & hold","#888888",bt(buyhold(d))),
           ("either-on","#d1242f",bt(blend_either_on(d))),
           ("avg (½)","#1f6feb",bt(blend_avg(d)))]
@@ -26,7 +26,7 @@ io=IOBuffer()
 print(io,"""<svg xmlns="http://www.w3.org/2000/svg" width="$W" height="$H" viewBox="0 0 $W $H" font-family="Helvetica,Arial,sans-serif">
 <rect width="$W" height="$H" fill="white"/>
 <text x="$L" y="22" font-size="17" font-weight="bold">DJIA 1970–2026 (real daily) — the QQQ blend overlay vs buy &amp; hold</text>
-<text x="$L" y="40" font-size="12" fill="#555">On the choppier Dow the overlay cuts drawdown but gives up return — the opposite of its QQQ result. Cash 4%/yr, 5 bps/trade.</text>
+<text x="$L" y="40" font-size="12" fill="#555">On the choppier Dow the overlay cuts drawdown but gives up return — the opposite of its QQQ result. Cash earns the 3M T-bill, 5 bps/trade.</text>
 """)
 for k in (1,2,5,10,20,50,100)
     v=log10(k); (v<gmin||v>gmax)&&continue; y=round(y1(k);digits=1)

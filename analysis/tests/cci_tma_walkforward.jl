@@ -10,7 +10,7 @@ include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
-const COST, RF = 5e-4, 0.04
+const COST, RF = 5e-4, tbill()
 const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
 const OUTDIR  = joinpath(dirname(@__DIR__), "results", "tests")
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)

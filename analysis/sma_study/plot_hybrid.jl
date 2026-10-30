@@ -11,7 +11,7 @@ const OUTDIR = joinpath(dirname(@__DIR__), "results", "sma_study")
 const TK = isempty(ARGS) ? "QQQ" : uppercase(ARGS[1])
 const SVG = joinpath(OUTDIR, TK == "QQQ" ? "hybrid_vs_fixed.svg" : "hybrid_$(TK).svg")
 d = load_ticker(TK; dir=joinpath(dirname(dirname(@__DIR__)), "data"))
-bt(s) = run_backtest(d, s; cost=5e-4, rf_annual=0.04).eq
+bt(s) = run_backtest(d, s; cost=5e-4, rf_annual=tbill()).eq
 
 curves = [
     ("buy & hold",               "#888888", bt(buyhold(d))),

@@ -12,7 +12,7 @@ using Dates
 const OUTDIR = joinpath(@__DIR__, "results")
 const SVG = joinpath(OUTDIR, "blend_finalists.svg")
 d = load_ticker("QQQ"; dir=joinpath(dirname(@__DIR__), "data"))
-bt(s) = run_backtest(d, s; cost=5e-4, rf_annual=0.04).eq
+bt(s) = run_backtest(d, s; cost=5e-4, rf_annual=tbill()).eq
 CCI = cci_band_tma_switch(d; exit_lo=-100, entry_hi=0, bear_exit=0, tma_n=200, lb=20, confirm=1)
 FR  = fast_reentry(d; fast=50, slow=200, re=50, hold=10)
 

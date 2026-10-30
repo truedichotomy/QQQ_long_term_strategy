@@ -6,7 +6,7 @@
 #
 # Assumptions (see project README / earlier design decisions):
 #   * exposure is long/flat only (fully in QQQ or fully in cash)
-#   * cash earns ~4%/yr
+#   * cash earns the 3M T-bill yield
 #   * 5 bps proportional cost charged on turnover (whipsaw penalty)
 
 include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
@@ -14,7 +14,7 @@ using .QQQBacktest
 using Printf, Statistics, Dates
 
 const COST = 5e-4
-const RF   = 0.04
+const RF   = tbill()
 const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
 const OUTDIR  = joinpath(dirname(@__DIR__), "results", "sma_study")
 
@@ -79,8 +79,8 @@ metrics = [(name, compute_metrics(b), b) for (name, b) in results]
 
 bh_m = metrics[1][2]
 bh_b = metrics[1][3]
-@printf("Buy & hold benchmark:  CAGR %.2f%%   maxDD %.1f%%   (cash=%.0f%%/yr, cost=%.0f bps)\n\n",
-        100bh_m.cagr, 100bh_m.maxdd, 100RF, 1e4COST)
+@printf("Buy & hold benchmark:  CAGR %.2f%%   maxDD %.1f%%   (cash = 3M T-bill, cost=%.0f bps)\n\n",
+        100bh_m.cagr, 100bh_m.maxdd, 1e4COST)
 
 # bar: beat B&H CAGR AND drawdown no worse (maxdd is negative, so >= means shallower)
 passes(m) = m.cagr > bh_m.cagr && m.maxdd >= bh_m.maxdd
@@ -161,11 +161,12 @@ println("  med DD s/b = median in-window max drawdown, flagship / B&H\n")
 flag_sig = candidates[findfirst(c -> c[1] == flag_name, candidates)][2]
 println("Sensitivity of flagship CAGR / maxDD:")
 @printf("  %-14s", "cost \\ cash")
-for rf in (0.0, 0.04, 0.05); @printf("%14s", @sprintf("%.0f%%/yr", 100rf)); end
+CASH = [("0%/yr", 0.0), ("3M T-bill", tbill()), ("flat 4%/yr", 0.04)]
+for (lbl, _) in CASH; @printf("%14s", lbl); end
 println()
 for c in (0.0, 5e-4, 1e-3)
     @printf("  %-14s", @sprintf("%.0f bps", 1e4c))
-    for rf in (0.0, 0.04, 0.05)
+    for (_, rf) in CASH
         bb = run_backtest(d, flag_sig; cost=c, rf_annual=rf)
         mm = compute_metrics(bb)
         @printf("%14s", @sprintf("%.1f%%/%.0f%%", 100mm.cagr, 100mm.maxdd))

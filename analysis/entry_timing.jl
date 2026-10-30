@@ -9,9 +9,9 @@ include(joinpath(@__DIR__, "QQQBacktest.jl")); using .QQQBacktest
 q(x,p) = quantile(x,p)
 function study(tk)
     d = load_ticker(tk; dir=joinpath(dirname(@__DIR__), "data")); n = length(d)
-    eo = run_backtest(d, blend_either_on(d); cost=5e-4, rf_annual=0.04)
-    av = run_backtest(d, blend_avg(d);       cost=5e-4, rf_annual=0.04)
-    bh = run_backtest(d, buyhold(d);         cost=5e-4, rf_annual=0.04)
+    eo = run_backtest(d, blend_either_on(d); cost=5e-4, rf_annual=tbill())
+    av = run_backtest(d, blend_avg(d);       cost=5e-4, rf_annual=tbill())
+    bh = run_backtest(d, buyhold(d);         cost=5e-4, rf_annual=tbill())
     cmax = accumulate(max, d.close)                      # trailing all-time high
     # your situation: overlay says invested AND price within 5% of its high
     entries = [i for i in 1:n if eo.pos[i]==1 && d.close[i] >= 0.95*cmax[i]]

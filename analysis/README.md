@@ -107,15 +107,18 @@ Do **not** rasterize wide SVGs with macOS `qlmanage` (it square-crops and chops 
 
 ## Method
 
-- **Data**: `../data/QQQ (…).csv`, ~6,860 daily bars, 1999-03-10 → 2026-06-23 (multiple
+- **Data**: `../data/QQQ (…).csv`, ~6,950 daily bars, 1999-03-10 → 2026-10-29 (multiple
   overlapping pulls merged by date). The window deliberately spans the dot-com crash, 2008,
   2020 and 2022, so drawdown is stress-tested. **Only the first 6 columns (OHLCV) are used** —
   all indicators are computed in `src/indicators.jl`, never read from the source file.
 - **Causality**: every signal is lagged one day (`pos[i] = signal[i-1]`) before it earns a
   return — no look-ahead. Indicators are NaN until their look-back fills, so each strategy
   is automatically flat during warm-up.
-- **Accounting**: long/flat only (100 % QQQ or 100 % cash). Cash earns **4 %/yr**; **5 bps**
-  proportional cost on turnover. Both assumptions are stress-tested (see sensitivity table).
+- **Accounting**: long/flat only (100 % QQQ or 100 % cash). Cash earns the **actual daily
+  3-month T-bill yield** (`../data/rates/TBILL_3M.csv`; 0–6 %, ~2 % on average since 1999), which
+  is also the Sharpe/Sortino hurdle; **5 bps** proportional cost on turnover. Both assumptions
+  are stress-tested (see the sensitivity notes). Versions of this writeup before 2026-10 credited
+  cash a flat 4 %, which flattered every rule that sits in cash — see `rates_review.jl`.
 - **Bar**: CAGR > B&H **and** max drawdown no worse than B&H.
 - **Robustness**: rolling windows of 21d…2520d (≈1mo…10yr), reporting how often the strategy
   beats B&H on return and on drawdown at each scale. This guards against the full-sample
@@ -135,11 +138,11 @@ when price reclaims the 50-day SMA, ~10-day minimum hold) raises return at the s
 
 | 1999–2026 | Standard (fast re-entry) | Conservative (50/200) | buy & hold |
 |---|---:|---:|---:|
-| CAGR | **14.4 %** | 11.9 % | 10.3 % |
-| Total (×$1) | **39.0×** | 21.2× | 14.5× |
+| CAGR | **13.7 %** | 11.0 % | 10.0 % |
+| Total (×$1) | **34.5×** | 18.1× | 14.0× |
 | Max drawdown | −36 % | −36 % | −83 % |
-| Sharpe / Sortino / Calmar | **0.58 / 0.82 / 0.40** | 0.49 / 0.70 / 0.33 | 0.35 / 0.51 / 0.12 |
-| OOS 2004+ CAGR / maxDD | 14.1 % / −29 % | 12.4 % / −29 % | 14.7 % / −54 % |
+| Sharpe / Sortino / Calmar | **0.64 / 0.91 / 0.38** | 0.56 / 0.79 / 0.30 | 0.42 / 0.60 / 0.12 |
+| OOS 2004+ CAGR / maxDD | 13.2 % / −29 % | 11.4 % / −29 % | 14.2 % / −54 % |
 | Trades/yr | ~5 | ~1.3 | 0 |
 
 ![equity & drawdown](results/sma_study/hybrid_vs_fixed.svg)
@@ -147,26 +150,32 @@ when price reclaims the 50-day SMA, ~10-day minimum hold) raises return at the s
 ## The honest read
 
 1. **The reliable win is risk, not raw return.** Across rolling windows the flagship is
-   shallower-than-or-equal to B&H on drawdown **66–86 %** of the time at *every* scale — a
-   robust, assumption-free reduction. Drawdown is roughly halved and Calmar roughly tripled.
+   shallower-than-or-equal to B&H on drawdown **75–99 %** of the time at *every* scale — a
+   robust, assumption-free reduction. Drawdown is roughly halved and Calmar more than doubled.
 
 2. **It does *not* reliably out-return B&H window-by-window.** Its rolling *return* win-rate
-   is mostly **below 50 %** (19–53 % depending on scale). The full-sample CAGR edge comes
-   almost entirely from side-stepping the deep, grinding bear markets (esp. the −83 % dot-com
-   crash right after the 1999 start), plus earning 4 % in cash while out — not from beating
-   B&H in a typical year.
+   is **below 50 %** at every scale (18–44 %). The full-sample CAGR edge comes almost entirely
+   from side-stepping the deep, grinding bear markets (esp. the −83 % dot-com crash right
+   after the 1999 start), plus a little T-bill interest while out — not from beating B&H in a
+   typical year.
 
-3. **The CAGR edge is assumption-sensitive; the drawdown edge is not.** At 0 % cash the CAGR
-   advantage shrinks to ~+0.2 pp (10.5 % vs 10.3 %); at 4–5 % cash it's +1.5–2.0 pp. The
-   −36 % vs −83 % drawdown gap holds regardless of cash rate or cost (robust to 10 bps).
+3. **The CAGR edge is assumption-sensitive; the drawdown edge is not.** With real T-bill cash
+   the classic 50/200's edge is +1.0 pp (11.0 % vs 10.0 %); at 0 % cash it shrinks to +0.3 pp,
+   and the old flat-4 % assumption inflated it to +1.6 pp. The −36 % vs −83 % drawdown gap
+   holds regardless of cash rate or cost (robust to 10 bps).
 
-## Trade-off frontier (all clear the bar — pick by what you weight)
+## Trade-off frontier (pick by what you weight)
 
 | if you want…                  | strategy        | CAGR   | maxDD  | Calmar |
 |-------------------------------|-----------------|-------:|-------:|-------:|
-| max CAGR (accept deeper DD)   | regime-stay 200 | 12.2 % | −51 %  | 0.24   |
-| **best balance (flagship)**   | **SMA 50/200**  | 11.9 % | −36 %  | 0.33   |
-| smoothest ride (~B&H return)  | CCI(40)>0 / ADX | 10.3–10.5 % | −28 % | 0.37–0.38 |
+| max CAGR (accept deeper DD)   | regime-stay 200 | 11.5 % | −53 %  | 0.22   |
+| **best balance (flagship)**   | **SMA 50/200**  | 11.0 % | −36 %  | 0.30   |
+| smoothest ride — *below B&H return* | CCI(40)>0 / ADX | 8.5–9.1 % | −29 % | 0.29–0.31 |
+
+The first two clear the bar (13 rules in the sweep still do). The low-exposure filters on
+the last row **no longer do with real T-bill cash**: they sit out 35–55 % of the time, and
+their former "~B&H return" came from the flat 4 % credited to that cash through the zero-rate
+2010s.
 
 There is no per-window free lunch: to beat B&H on *return* in a typical window you must stay
 ~fully invested (≈B&H, little drawdown relief); to cut drawdown hard you must sit out and give
@@ -180,11 +189,11 @@ bear-concentrated rather than a typical-window free lunch.
 
 A separate, momentum-based risk-reducer (sell when CCI(50) < −120, re-enter when CCI(50) > −40) —
 the **precursor to the blend's momentum filter** ([STRATEGY.md §2b](STRATEGY.md)). Over 2006–2026 — split into two
-independent decades — it cuts max drawdown to ~−22 % (vs B&H's −36 %/−54 %) and roughly doubles
-Calmar in both halves, at ~0.4–1.7 pp/yr less CAGR. Its walk-forward (`tests/cci_walkforward.jl`)
+independent decades — it cuts max drawdown to ~−22 % (vs B&H's −36 %/−54 %) and raises Calmar
+1.4–2× in both halves, at ~1.3–1.9 pp/yr less CAGR. Its walk-forward (`tests/cci_walkforward.jl`)
 mirrors the SMA finding: the fixed band beats adaptive re-optimization out-of-sample (Calmar
-0.59 vs 0.46), evidence it isn't overfit. **Caveat:** unlike the SMA filter it handled the
-2000–2002 dot-com grind poorly (full-1999 sample drawdown −66 %, Calmar 0.17). That weakness
+0.55 vs 0.39), evidence it isn't overfit. **Caveat:** unlike the SMA filter it handled the
+2000–2002 dot-com grind poorly (full-1999 sample drawdown −67 %, Calmar 0.16). That weakness
 was later fixed by gating its exit on a 200-day triangular-MA slope (→ `cci_band_tma_switch`),
 which became the blend's momentum filter (below).
 
@@ -197,16 +206,16 @@ Blending them — **hold QQQ unless *both* say "out"** (`blend_either_on`) — c
 
 | 1999–2026 | either-on blend | avg ½ blend | buy & hold |
 |---|---:|---:|---:|
-| CAGR | **15.3 %** | 13.7 % | 10.2 % |
-| Growth of \$1 | **48×** | 34× | 14× |
-| Max drawdown | −37 % | **−33 %** | −83 % |
-| Calmar | 0.41 | **0.42** | 0.12 |
+| CAGR | **14.8 %** | 12.9 % | 10.0 % |
+| Growth of \$1 | **45×** | 29× | 14× |
+| Max drawdown | −38 % | **−32 %** | −83 % |
+| Calmar | 0.39 | **0.40** | 0.12 |
 | Trades/yr | **~3** | ~12 | 0 |
 
 This is the only candidate in the study to **beat B&H on full-sample return *and* roughly
 halve its drawdown** — the bar the study set out to clear. It stays consistent with the "no
 free lunch" read above: the return edge is bear-concentrated (out-of-sample 2004+, with the
-dot-com crash excluded, `either-on` *ties* B&H at 14.9 % vs 14.5 %, just at half the drawdown).
+dot-com crash excluded, `either-on` *ties* B&H at 14.4 % vs 14.2 %, at ~60 % of the drawdown).
 `either-on` is the adopted default (max return, ~3 trades/yr, all-in/all-out); `avg` is the
 smoother ½-size alternative that also cushions fast crashes. Full strategy, performance and
 execution: **[STRATEGY.md](STRATEGY.md)**; it's what `signal.jl` reports.
@@ -227,6 +236,7 @@ execution: **[STRATEGY.md](STRATEGY.md)**; it's what `signal.jl` reports.
 
 **`analysis/` (root) — production: the two blend cases**
 - `signal.jl` — **the day-to-day tool**: pulls the latest data when stale (>1h) & the market is open (`--fetch` forces, `--no-fetch` offline), then prints the buy-hold/sell-wait call for **both** blends (either-on + avg ½-size) and the filter breakdown (and refreshes `web/data.js`)
+- `rates_review.jl` — rate-aware review: re-evaluates the blends with cash earning the real daily 3-month T-bill yield (`data/rates/TBILL_3M.csv`, also the Sharpe hurdle) next to the old flat 4% and 0%, by era, by rate regime, rolling windows, and recent performance
 - `fetch_data.jl` — explicit fetch of recent daily OHLCV from a free public source (Yahoo, via stdlib `Downloads`); no API key or data-service site
 - `build_blend_pages.jl` — self-contained execution webpages (`results/blend_either_on.html`, `results/blend_avg.html`)
 - `blend_finalists_compare.jl` / `blend_walkforward.jl` — side-by-side battery and OOS validation (STRATEGY.md §3–4)

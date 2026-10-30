@@ -4,7 +4,7 @@
 # signature the plain band fails against). Does it plug the 2000-2002 hole
 # without degrading the modern-era numbers?
 #
-# Same assumptions: 1-day lag, 5 bps cost, cash 4%/yr. Signals built on full
+# Same assumptions: 1-day lag, 5 bps cost, cash = 3M T-bill. Signals built on full
 # history then sliced (CCI/SMA warm, real carried-in state).
 #
 #   julia --startup-file=no analysis/cci_regime_switch_test.jl
@@ -13,7 +13,7 @@ include(joinpath(dirname(@__DIR__), "QQQBacktest.jl"))
 using .QQQBacktest
 using Printf, Statistics, Dates
 
-const COST, RF = 5e-4, 0.04
+const COST, RF = 5e-4, tbill()
 const DATADIR = joinpath(dirname(dirname(@__DIR__)), "data")
 bt(d, sig) = run_backtest(d, sig; cost=COST, rf_annual=RF)
 

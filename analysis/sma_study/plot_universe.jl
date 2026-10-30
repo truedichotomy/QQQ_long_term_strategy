@@ -10,13 +10,13 @@ using .QQQBacktest
 using Printf, Statistics, Dates
 
 const RES = joinpath(dirname(@__DIR__), "results", "sma_study"); const SVG = joinpath(RES, "risk_return.svg")
-const RF = 0.04
+const RF = tbill()
 bt(d, s) = run_backtest(d, s; cost=5e-4, rf_annual=RF)
 function wm(eq, dts, a, b)
     es = eq[a:b] ./ eq[a]; m = length(es); yrs = max(Dates.value(dts[b] - dts[a]) / 365.25, 1e-9)
-    er = [es[i] / es[i-1] - 1 for i in 2:m]; rfd = (1 + RF)^(1/252) - 1
-    μ = mean(er); σ = std(er)
-    (cagr=es[end]^(1/yrs) - 1, maxdd=max_drawdown(es), sharpe=(μ - rfd) / σ * sqrt(252))
+    er = [es[i] / es[i-1] - 1 for i in 2:m]
+    ex = er .- [(1 + y)^(1/252) - 1 for y in rate_on(RF, dts[a:b-1])]   # excess over the day's T-bill
+    (cagr=es[end]^(1/yrs) - 1, maxdd=max_drawdown(es), sharpe=mean(ex) / std(ex) * sqrt(252))
 end
 
 tickers = ("QQQ","VGT","SOXX","SPY","DIA","IWM","XLE","TLT","GLD","TIP")

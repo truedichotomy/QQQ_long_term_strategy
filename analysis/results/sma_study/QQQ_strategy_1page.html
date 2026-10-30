@@ -29,7 +29,7 @@ code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:8.8px;background:#
 </style></head><body>
 <h1>QQQ Trend-Filter Strategy</h1>
 <div class="sub">Long/flat timing — hold QQQ while its trend is up (50-day average above the 200-day), step aside to cash when it rolls over. Captures most of buy-and-hold's return at roughly half the drawdown.</div>
-<div class="banner"><b class="l">▲ LONG</b> &nbsp;as of 2026-06-23 · close 719.0 · SMA-50 698.0 &gt; SMA-200 630.0. &nbsp; <b>Standard</b> since 2025-06-30 · <b>Conservative</b> since 2025-06-24.</div>
+<div class="banner"><b class="l">▲ LONG</b> &nbsp;as of 2026-10-29 · close 715.0 · SMA-50 725.0 &gt; SMA-200 679.0. &nbsp; <b>Standard</b> since 2025-06-30 · <b>Conservative</b> since 2025-06-24.</div>
 <div class="grid">
   <div class="left">
     <figure><svg xmlns="http://www.w3.org/2000/svg" width="1060" height="700" viewBox="0 0 1060 700" font-family="Helvetica,Arial,sans-serif">
@@ -41,14 +41,14 @@ code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:8.8px;background:#
     <table>
       <thead><tr><th>1999–2026</th><th class="std">Standard</th><th>Conserv.</th><th>Buy&amp;hold</th></tr></thead>
       <tbody>
-      <tr><td>CAGR</td><td class="std win">14.3%</td><td>11.7%</td><td>10.2%</td></tr>
-      <tr><td>Growth of $1</td><td class="std">38.0×</td><td>20.6×</td><td>14.1×</td></tr>
+      <tr><td>CAGR</td><td class="std win">13.7%</td><td>11.0%</td><td>10.0%</td></tr>
+      <tr><td>Growth of $1</td><td class="std">34.5×</td><td>18.1×</td><td>14.0×</td></tr>
       <tr><td>Max drawdown</td><td class="std">-36.0%</td><td>-36.0%</td><td class="bad">-83.0%</td></tr>
-      <tr><td>Sharpe</td><td class="std">0.57</td><td>0.49</td><td>0.35</td></tr>
-      <tr><td>Calmar</td><td class="std">0.39</td><td>0.32</td><td>0.12</td></tr>
-      <tr><td>OOS 2004+ CAGR</td><td class="std">13.9%</td><td>12.2%</td><td>14.6%</td></tr>
+      <tr><td>Sharpe</td><td class="std">0.64</td><td>0.56</td><td>0.42</td></tr>
+      <tr><td>Calmar</td><td class="std">0.38</td><td>0.3</td><td>0.12</td></tr>
+      <tr><td>OOS 2004+ CAGR</td><td class="std">13.3%</td><td>11.5%</td><td>14.3%</td></tr>
       <tr><td>OOS drawdown</td><td class="std">-29.0%</td><td>-29.0%</td><td class="bad">-54.0%</td></tr>
-      <tr><td>Trades / yr</td><td class="std">4.8</td><td>1.3</td><td>0</td></tr>
+      <tr><td>Trades / yr</td><td class="std">4.7</td><td>1.3</td><td>0</td></tr>
       </tbody>
     </table>
     <div class="pick"><b>If you pick one asset:</b> QQQ, run with the <b>Standard</b> variant — best risk-adjusted return and validated out-of-sample. <b>SOXX</b> (Conservative variant) is the higher-octane alternative; both beat the other 8 ETFs tested. <b>VGT</b> ranks well in-sample but its edge doesn't confirm out-of-sample.</div>
@@ -64,11 +64,11 @@ code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:8.8px;background:#
     <h2>What to know</h2>
     <ul>
       <li>Edge is concentrated in <b>bear markets</b>; it trails buy-and-hold in sustained bulls.</li>
-      <li>Hold cash in <b>T-bills / money-market</b> (~4%) — part of the return edge depends on it.</li>
+      <li>Hold cash in <b>T-bills / money-market</b> (earning the T-bill rate) — part of the return edge depends on it.</li>
       <li>Use a <b>tax-advantaged account</b> (switches realize gains). Use QQQ/QQQM, not leveraged TQQQ.</li>
       <li>Won't dodge <b>sudden one-month crashes</b> (COVID); whipsaws in choppy sideways markets.</li>
     </ul>
   </div>
 </div>
-<div class="foot">Historical backtest of mechanical rules on daily QQQ, 1999–2026; cash earns 4%/yr, 5 bps cost per switch, signals acted next session (no look-ahead). <b>Not investment advice; past performance does not guarantee future results.</b> Full report: QQQ_strategy.html · methodology: analysis/STRATEGY.md.</div>
+<div class="foot">Historical backtest of mechanical rules on daily QQQ, 1999–2026; cash earns the 3M T-bill yield, 5 bps cost per switch, signals acted next session (no look-ahead). <b>Not investment advice; past performance does not guarantee future results.</b> Full report: QQQ_strategy.html · methodology: analysis/STRATEGY.md.</div>
 </body></html>

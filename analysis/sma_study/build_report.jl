@@ -13,7 +13,7 @@ using Printf, Statistics, Dates
 
 const RES = joinpath(dirname(@__DIR__), "results", "sma_study")
 const OUT = joinpath(RES, "QQQ_strategy.html")
-const COST, RF = 5e-4, 0.04
+const COST, RF = 5e-4, tbill()
 
 d = load_ticker("QQQ"; dir=joinpath(dirname(dirname(@__DIR__)), "data"))
 N = length(d)
@@ -55,11 +55,12 @@ periods = [("Dot-com crash", 2000, 3, 10, 2002, 10, 9), ("Mid-2000s recovery", 2
 const UNIVERSE = ("QQQ", "VGT", "SOXX", "SPY", "DIA", "IWM", "XLE", "TLT", "GLD", "TIP")
 function wm_ra(eq, dts, a, b)
     es = eq[a:b] ./ eq[a]; m = length(es); yrs = max(Dates.value(dts[b] - dts[a]) / 365.25, 1e-9)
-    er = [es[i] / es[i - 1] - 1 for i in 2:m]; rfd = (1 + RF)^(1 / 252) - 1
-    μ = mean(er); σ = std(er); dn = sqrt(mean(x -> min(x - rfd, 0.0)^2, er)); mdd = max_drawdown(es)
+    er = [es[i] / es[i - 1] - 1 for i in 2:m]
+    ex = er .- [(1 + y)^(1 / 252) - 1 for y in rate_on(RF, dts[a:b-1])]   # excess over the day's T-bill
+    σ = std(er); dn = sqrt(mean(x -> min(x, 0.0)^2, ex)); mdd = max_drawdown(es)
     cagr = es[end]^(1 / yrs) - 1
-    return (cagr=cagr, maxdd=mdd, vol=σ * sqrt(252), sharpe=(μ - rfd) / σ * sqrt(252),
-            sortino=(μ - rfd) / dn * sqrt(252), calmar=cagr / abs(mdd))
+    return (cagr=cagr, maxdd=mdd, vol=σ * sqrt(252), sharpe=mean(ex) / std(ex) * sqrt(252),
+            sortino=mean(ex) / dn * sqrt(252), calmar=cagr / abs(mdd))
 end
 rank_rows = []
 for t in UNIVERSE
@@ -142,7 +143,7 @@ print(io, """<table><thead><tr><th>1999–2026</th><th class="num std">Standard<
 <tr><td>Out-of-sample drawdown</td><td class="num std">$(pct(ost.maxdd;d=0))</td><td class="num">$(pct(ocn.maxdd;d=0))</td><td class="num bad">$(pct(obh.maxdd;d=0))</td></tr>
 <tr><td>Trades per year</td><td class="num std">$(round(Mst.ntrades/Mst.years;digits=1))</td><td class="num">$(round(Mcn.ntrades/Mcn.years;digits=1))</td><td class="num">0</td></tr>
 </tbody></table>
-<p style="color:var(--mut);font-size:13px">Assumptions: daily data; cash earns 4%/yr; 5&nbsp;bps cost per switch; signals computed at the close and acted on the next session (no look-ahead).</p>
+<p style="color:var(--mut);font-size:13px">Assumptions: daily data; cash earns the 3M T-bill yield; 5&nbsp;bps cost per switch; signals computed at the close and acted on the next session (no look-ahead).</p>
 """)
 
 # §1
@@ -275,7 +276,7 @@ print(io, """<h2>7 · How to execute (Standard variant)</h2>
 <h3>Where to hold each state</h3>
 <ul>
 <li><b>Long:</b> QQQ, or <b>QQQM</b> (same index, lower 0.15% expense ratio).</li>
-<li><b>Cash:</b> a money-market fund, T-bills, or HYSA — <b>not</b> idle 0% cash. The return edge partly depends on earning ~4% here; the drawdown protection does not. <b>Do not</b> use leveraged ETFs (TQQQ).</li>
+<li><b>Cash:</b> a money-market fund, T-bills, or HYSA — <b>not</b> idle 0% cash. The return edge partly depends on earning the T-bill rate here; the drawdown protection does not. <b>Do not</b> use leveraged ETFs (TQQQ).</li>
 </ul>
 <h3>Account &amp; tax</h3>
 <p>The Standard variant realizes ~5 taxable events/year, the Conservative ~1. <b>Use a tax-advantaged account</b> (IRA / Roth / 401k) so switches don't trigger capital-gains tax — this matters more for the Standard variant; in a taxable account the Conservative variant's lower turnover is the safer choice.</p>
