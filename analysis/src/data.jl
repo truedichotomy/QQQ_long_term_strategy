@@ -133,6 +133,7 @@ function rate_on(rs::RateSeries, dates::AbstractVector{Date})
 end
 
 const TBILL_FILE = joinpath("rates", "TBILL_3M.csv")
+const TNX_FILE   = joinpath("rates", "TNX_10Y.csv")
 
 """
     load_tbill(; dir="data") -> RateSeries
@@ -141,15 +142,18 @@ The daily 13-week US Treasury-bill yield (CBOE `^IRX`, the same rate as FRED DTB
 from `dir/rates/TBILL_3M.csv` (refresh with `update_tbill`). Use it as the cash yield and the
 Sharpe hurdle: `run_backtest(d, sig; rf_annual=load_tbill(dir=DATADIR))`.
 """
-function load_tbill(; dir::AbstractString="data")
-    path = joinpath(dir, TBILL_FILE)
-    isfile(path) || error("No T-bill file at $path — fetch it with update_tbill(dir=\"$dir\").")
+load_tbill(; dir::AbstractString="data") = load_rate(TBILL_FILE, "3M T-bill"; dir=dir)
+
+"A `Date,Yield` (percent) rate file under `dir` as a `RateSeries` (decimal) — e.g. `TNX_FILE`."
+function load_rate(file::AbstractString, name::AbstractString; dir::AbstractString="data")
+    path = joinpath(dir, file)
+    isfile(path) || error("No rate file at $path — fetch it with update_rate/update_tbill(dir=\"$dir\").")
     date = Date[]; rate = Float64[]
     for line in Iterators.drop(eachline(path), 1)          # header: Date,Yield (percent)
         f = split(line, ','); length(f) < 2 && continue
         push!(date, Date(f[1])); push!(rate, parse(Float64, f[2]) / 100)
     end
-    return RateSeries("3M T-bill", date, rate)
+    return RateSeries(name, date, rate)
 end
 
 const _REPO_DATA = normpath(joinpath(@__DIR__, "..", "..", "data"))

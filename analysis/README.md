@@ -97,8 +97,10 @@ julia analysis/plot_blend_finalists.jl  # equity + drawdown chart → results/bl
 
 **`analysis/tests/` — exploratory / development scripts** behind the blend (kept for the record):
 the CCI band & TMA-switch sweeps and walk-forwards (`cci_*.jl`), the lost-decade study
-(`period_1999_2009.jl`), and the earlier two-strategy finalist comparison (`finalists_*.jl`,
-`plot_finalists.jl`).
+(`period_1999_2009.jl`), the earlier two-strategy finalist comparison (`finalists_*.jl`,
+`plot_finalists.jl`), and the interest-rate signal study (`rate_signals.jl` — stock/bill
+co-movement by decade, forward returns by bill trend, rate overlays on either-on across
+QQQ/NDX/SPX; none adopted, see STRATEGY.md §3d).
 
 Charts are **SVG** (zero-dependency); plot scripts also emit PNG if `rsvg-convert` is on `PATH`.
 Do **not** rasterize wide SVGs with macOS `qlmanage` (it square-crops and chops recent years).

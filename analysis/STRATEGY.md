@@ -180,6 +180,15 @@ Every number here credits cash the **actual daily 3-month T-bill yield** (`data/
   nothing. The weak spot is the 2010s ZIRP decade (`either-on` 13.6 %/yr vs 16.5 %).
 - **Rates don't change the choice of variant**: `either-on` out-returns `avg` in every rate
   band; `avg` wins only on drawdown.
+- **Rates don't work as a timing signal** (`tests/rate_signals.jl`, tested on QQQ, the
+  Nasdaq-100 since 1985 and the S&P 500 since 1970). Stocks and bill yields move *opposite*
+  only in inflation regimes (S&P quarterly correlation −0.16 to −0.24 in the 1970s–90s); they
+  move *together* when the Fed cuts into a crash (+0.3 to +0.4 in the 2000s), ~0 in the 2010s,
+  and +0.23 over QQQ's life. As overlays on `either-on`: exiting after emergency cuts, exiting
+  while the 10y–3m curve is inverted, buying on Fed easing, and a T-bill hurdle for momentum all
+  hurt. The one rule that looked good over the full sample — exit after bills rise > 1 pp in 6
+  months — earned all of it in the 1970–2005 inflation era and lost in all three indices over
+  the last ~20 years. The price filters see the rate-linked bears first; the Fed reacts.
 - QQQ prices here exclude dividends (~0.6 %/yr); adding them lifts every line by about that
   much and leaves the edges unchanged.
 

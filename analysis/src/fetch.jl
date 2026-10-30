@@ -206,15 +206,24 @@ the cash yield / risk-free rate `load_tbill` feeds to backtests and the web bund
 exists, only the last ~3 months are pulled and merged in (new wins); `full=true`, or a missing
 file, re-downloads the whole 1960 → history. Refuses to write if the response looks truncated.
 """
-function update_tbill(; dir::AbstractString, full::Bool=false)
-    path = joinpath(dir, TBILL_FILE)
+update_tbill(; dir::AbstractString, full::Bool=false) = update_rate("^IRX", TBILL_FILE; dir=dir, full=full)
+
+"""
+    update_rate(symbol, file; dir, full=false) -> (n, first, last, latest)
+
+Refresh `dir/file` (`Date,Yield` in percent) from a Yahoo yield index — `^IRX` (13-week bill,
+see `update_tbill`) or `^TNX` (10-year note, `TNX_FILE`). Same incremental top-up and
+truncation guard as `update_tbill`.
+"""
+function update_rate(symbol::AbstractString, file::AbstractString; dir::AbstractString, full::Bool=false)
+    path = joinpath(dir, file)
     full = full || !isfile(path)
     q = full ? "period1=-315619200&period2=$(round(Int, time()))" : "range=3mo"
     io = IOBuffer()
-    Downloads.download("https://query1.finance.yahoo.com/v8/finance/chart/%5EIRX?$q&interval=1d", io;
+    Downloads.download("https://query1.finance.yahoo.com/v8/finance/chart/$(replace(symbol, "^" => "%5E"))?$q&interval=1d", io;
                        headers = ["User-Agent" => _YAHOO_UA], timeout = 60)
     json = String(take!(io))
-    occursin("\"error\":{", json) && error("Yahoo returned an error for ^IRX")
+    occursin("\"error\":{", json) && error("Yahoo returned an error for $symbol")
     ts = _yarr(json, "timestamp"); cl = _yarr(json, "close")
     byd = Dict{Date,Float64}()
     if !full                                                   # keep the history, top up the tail

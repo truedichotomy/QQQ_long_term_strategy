@@ -24,7 +24,7 @@ include("src/fetch.jl")
 
 # data
 export MarketData, load_market, load_ticker, find_data_file, find_data_files, merge_markets, date_range, subset,
-       RateSeries, rate_on, load_tbill, tbill
+       RateSeries, rate_on, load_tbill, load_rate, tbill, TBILL_FILE, TNX_FILE
 # indicators
 export sma, ema, rsi, cci, tma, macd, awesome, adx, rolling_std, rolling_max, simple_returns, drawdown_series, max_drawdown
 # engine + metrics
@@ -44,6 +44,6 @@ export HORIZONS, rolling_compare, multiscale,
        win_cagr, win_calmar, win_sharpe, walk_forward, equity_from_sr
 # data fetch / web bundle
 export fetch_ohlcv, append_to_archive, update_data, archive_provisional, write_web_bundle,
-       now_et, market_open_et, archive_age, update_tbill, last_session_date
+       now_et, market_open_et, archive_age, update_tbill, update_rate, last_session_date
 
 end # module
