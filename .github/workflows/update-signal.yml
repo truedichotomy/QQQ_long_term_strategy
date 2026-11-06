@@ -17,6 +17,11 @@ on:
     - cron: '30 21 * * 1-5'   # weekdays 21:30 UTC — 30 min after the US close (primary)
     - cron: '30 23 * * 1-5'   # weekdays 23:30 UTC — backup if the primary was skipped/failed
   workflow_dispatch:
+    inputs:
+      test_alert:
+        description: 'Only send a test push to the ntfy topic (no data update, no deploy)'
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths: ['web/**', 'analysis/**', 'data/**']
@@ -31,7 +36,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Manual "Run workflow" with the test_alert box ticked: confirm a phone subscribed to
+  # the ntfy topic gets pushes, without waiting for a real flip. Sends the current state
+  # so the test is useful on its own; touches no data and doesn't deploy.
+  test-alert:
+    if: github.event_name == 'workflow_dispatch' && inputs.test_alert
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Send a test ntfy push
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          if [ -z "$NTFY_TOPIC" ]; then echo '::error::NTFY_TOPIC secret not set'; exit 1; fi
+          S=.github/signal-state.json
+          curl -fsS \
+            -H "Title: QQQ signal: test alert" \
+            -H "Priority: high" \
+            -H "Tags: white_check_mark" \
+            -d "Test alert — this phone is subscribed. Current either-on action: $(jq -r .either $S) as of the $(jq -r .asOf $S) close (QQQ $(jq -r .close $S)); avg ½-size $(jq -r .avg $S)%. Real alerts arrive only when the either-on action changes. https://truedichotomy.github.io/QQQ_long_term_strategy/" \
+            "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
+          echo 'test push sent'
+
   update-and-deploy:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.test_alert) }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
