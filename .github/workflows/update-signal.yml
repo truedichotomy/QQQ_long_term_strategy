@@ -1,15 +1,21 @@
 # Nightly after-close refresh of the QQQ signal site.
 #
-# 23:30 UTC is 18:30 EST / 19:30 EDT — comfortably after the 16:00 ET close year-round,
-# so the fetched bar is always final (never provisional). `signal.jl --fetch` forces the
-# Yahoo pull, merges into data/, regenerates web/data.js, and prints the signal into the
-# run log. The refreshed data is committed back to main (GITHUB_TOKEN pushes don't
-# re-trigger workflows), then web/ is deployed to GitHub Pages.
+# GitHub starts scheduled runs late — the old 23:30 UTC slot landed 2–5 h after its cron
+# time (9:20–11:40 pm ET in Oct–Nov 2026). So the primary run is set for 21:30 UTC
+# (16:30 EST / 17:30 EDT): already after the 16:00 ET close year-round, so the fetched bar
+# is final (never provisional), and even with the delay the update lands well before
+# midnight ET. The 23:30 UTC run is a backup for a skipped or failed primary — when the
+# data is already current it commits nothing, and signal-state.json keeps it from
+# re-sending a flip alert. `signal.jl --fetch` forces the Yahoo pull, merges into data/,
+# regenerates web/data.js, and prints the signal into the run log. The refreshed data is
+# committed back to main (GITHUB_TOKEN pushes don't re-trigger workflows), then web/ is
+# deployed to GitHub Pages.
 name: update-signal
 
 on:
   schedule:
-    - cron: '30 23 * * 1-5'   # weekdays 23:30 UTC — after the US close
+    - cron: '30 21 * * 1-5'   # weekdays 21:30 UTC — 30 min after the US close (primary)
+    - cron: '30 23 * * 1-5'   # weekdays 23:30 UTC — backup if the primary was skipped/failed
   workflow_dispatch:
   push:
     branches: [main]
@@ -62,7 +68,8 @@ jobs:
           if git diff --cached --quiet; then
             echo 'no new bars (holiday or already current) — nothing to commit'
           else
-            git commit -m "Auto-update QQQ data ($(date -u +%F))"
+            # label with the close the data reflects, not the (often next-day) UTC run date
+            git commit -m "Auto-update QQQ data ($(node -p "require('./.github/signal-state.json').asOf") close)"
             git pull --rebase origin main
             git push
           fi
