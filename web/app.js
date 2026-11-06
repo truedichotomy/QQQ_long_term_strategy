@@ -183,7 +183,7 @@
     return '1Y';
   })();
   var CC = { close: '#2a78d6', s50: '#eb6834', s200: '#1baf7a', cci: '#2a78d6', entry: '#0a7f3f', exit: '#c1121f',
-             out: 'rgba(193,18,31,0.09)', grid: '#eceef0', axis: '#c7ccd2', xh: '#1f2937' };
+             out: 'rgba(193,18,31,0.09)', outBlend: 'rgba(193,18,31,0.24)', grid: '#eceef0', axis: '#c7ccd2', xh: '#1f2937' };
   var PAD = { l: 44, r: 8, t: 8, b: 22 }, MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   var CHG = null, chartW = 0;                         // geometry of the last render (crosshair)
 
@@ -194,7 +194,7 @@
     return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
   }
 
-  function chartSvg(o) {   // o: id, label, W, H, k0, i, lo, hi, state (1=IN), refs [{fn,color}], lines [{v,color}], years
+  function chartSvg(o) {   // o: id, label, W, H, k0, i, lo, hi, shades [{state (1=IN), fill}], refs [{fn,color}], lines [{v,color}], years
     var a = ANALYSIS, W = o.W, H = o.H, pw = W - PAD.l - PAD.r, ph = H - PAD.t - PAD.b, n = Math.max(o.i - o.k0, 1);
     var x = function (t) { return PAD.l + (t - o.k0) / n * pw; };
     var y = function (v) { return PAD.t + (1 - (v - o.lo) / (o.hi - o.lo)) * ph; };
@@ -211,13 +211,16 @@
     };
     var s = '<svg class="fc" id="' + o.id + '" tabindex="0" role="img" aria-label="' + o.label + '" viewBox="0 0 ' +
             W + ' ' + H + '" width="' + W + '" height="' + H + '">';
-    for (var t = o.k0, half = pw / n / 2; t <= o.i; t++) {          // filter-OUT spans
-      if (o.state[t] !== 0) continue;
-      var u = t; while (u < o.i && o.state[u + 1] === 0) u++;
-      var xa = Math.max(PAD.l, x(t) - half), xb = Math.min(PAD.l + pw, x(u) + half);
-      s += '<rect x="' + f1(xa) + '" y="' + PAD.t + '" width="' + f1(Math.max(xb - xa, 1)) + '" height="' + ph + '" fill="' + CC.out + '"/>';
-      t = u;
-    }
+    var half = pw / n / 2, t;
+    o.shades.forEach(function (sh) {                                 // OUT spans, layered in order
+      for (var t = o.k0; t <= o.i; t++) {
+        if (sh.state[t] !== 0) continue;
+        var u = t; while (u < o.i && sh.state[u + 1] === 0) u++;
+        var xa = Math.max(PAD.l, x(t) - half), xb = Math.min(PAD.l + pw, x(u) + half);
+        s += '<rect x="' + f1(xa) + '" y="' + PAD.t + '" width="' + f1(Math.max(xb - xa, 1)) + '" height="' + ph + '" fill="' + sh.fill + '"/>';
+        t = u;
+      }
+    });
     var step = niceStep(o.hi - o.lo, 4);                             // y grid + labels
     for (var k = Math.ceil(o.lo / step); k * step <= o.hi; k++) {
       var yy = f1(y(k * step));
@@ -249,7 +252,8 @@
     var a = ANALYSIS;
     return '<b>' + esc(a.date[t]) + '</b> · QQQ close <b>' + r(a.close[t], 2) + '</b> · SMA‑50 ' + ri(a.s50[t]) +
       ' · SMA‑200 ' + ri(a.s200[t]) + ' · trend ' + chip(a.tr[t] === 1) + '<br>CCI(40) <b>' + ri(a.c40[t]) +
-      '</b> · exits below ' + momExitAt(a, t) + ', re‑enters above 0 · momentum ' + chip(a.mom[t] === 1);
+      '</b> · exits below ' + momExitAt(a, t) + ', re‑enters above 0 · momentum ' + chip(a.mom[t] === 1) +
+      (blend === 'either' ? ' → either‑on ' + chip(a.either[t] === 1) : '');
   }
 
   function renderCharts(g) {
@@ -264,6 +268,9 @@
       if (!isNaN(a.c40[t])) { clo = Math.min(clo, a.c40[t]); chi = Math.max(chi, a.c40[t]); }
     }
     var pad = (hi - lo) * 0.05, cpad = (chi - clo) * 0.06;
+    // on the either-on tab, a darker band marks when the blend itself is OUT (both filters out → cash)
+    var eo = blend === 'either', blendShade = eo ? [{ state: a.either, fill: CC.outBlend }] : [];
+    var blendKey = eo ? '<span><i class="box dark"></i>either‑on OUT (in cash)</span>' : '';
     var btns = CH_RANGES.map(function (x) {
       return '<button data-range="' + x[0] + '"' + (x[0] === chartRange ? ' class="active"' : '') + '>' + x[0] + '</button>';
     }).join('');
@@ -273,21 +280,25 @@
       '<div class="fcread" id="fcread">' + readoutHtml(i) + '</div>' +
       '<div class="fctitle">Trend filter — QQQ close vs its 50‑ and 200‑day averages</div>' +
       '<div class="fclegend"><span><i style="border-color:' + CC.close + '"></i>QQQ close</span><span><i style="border-color:' +
-        CC.s50 + '"></i>SMA‑50</span><span><i style="border-color:' + CC.s200 + '"></i>SMA‑200</span><span><i class="box"></i>trend filter OUT</span></div>' +
+        CC.s50 + '"></i>SMA‑50</span><span><i style="border-color:' + CC.s200 + '"></i>SMA‑200</span><span><i class="box"></i>trend filter OUT</span>' +
+        blendKey + '</div>' +
       chartSvg({ id: 'fc-trend', label: 'QQQ close with 50- and 200-day moving averages', W: W, H: 200, k0: k0, i: i,
-                 lo: lo - pad, hi: hi + pad, state: a.tr, refs: [], years: yrs,
+                 lo: lo - pad, hi: hi + pad, shades: [{ state: a.tr, fill: CC.out }].concat(blendShade), refs: [], years: yrs,
                  lines: [{ v: a.s200, color: CC.s200 }, { v: a.s50, color: CC.s50 }, { v: a.close, color: CC.close }] }) +
       '<div class="fcnote">OUT after a death cross (SMA‑50 falls below SMA‑200); back IN when the close reclaims SMA‑50 ' +
         'or on a golden cross, at least 10 trading days after the last switch.</div>' +
       '<div class="fctitle">Momentum filter — CCI(40) and its thresholds</div>' +
       '<div class="fclegend"><span><i style="border-color:' + CC.cci + '"></i>CCI(40)</span><span><i class="dash" style="border-color:' +
         CC.entry + '"></i>re‑entry (0)</span><span><i class="dash" style="border-color:' + CC.exit +
-        '"></i>exit (−100, or 0 while the 200‑day triangular MA falls)</span><span><i class="box"></i>momentum filter OUT</span></div>' +
+        '"></i>exit (−100, or 0 while the 200‑day triangular MA falls)</span><span><i class="box"></i>momentum filter OUT</span>' +
+        blendKey + '</div>' +
       chartSvg({ id: 'fc-mom', label: 'CCI(40) with its entry and exit thresholds', W: W, H: 170, k0: k0, i: i,
-                 lo: clo - cpad, hi: chi + cpad, state: a.mom, years: yrs, lines: [{ v: a.c40, color: CC.cci }],
+                 lo: clo - cpad, hi: chi + cpad, shades: [{ state: a.mom, fill: CC.out }].concat(blendShade), years: yrs,
+                 lines: [{ v: a.c40, color: CC.cci }],
                  refs: [{ fn: function () { return 0; }, color: CC.entry }, { fn: function (t) { return momExitAt(a, t); }, color: CC.exit }] }) +
       '<div class="fcnote">OUT when CCI(40) closes below the red exit line; back IN when it closes above 0. ' +
-        'Shading marks each filter’s state at that close — trades are acted on the next session.</div>' +
+        'Shading marks each filter’s state at that close — trades are acted on the next session.' +
+        (eo ? ' Darker red: both filters OUT, so the either‑on blend is in cash.' : '') + '</div>' +
     '</div>';
   }
 

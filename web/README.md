@@ -19,7 +19,8 @@ Everything runs in your browser; nothing is uploaded.
      ending at the as-of date (6M / 1Y / 2Y / 5Y, remembered): the **trend** chart plots the
      QQQ close with its 50- and 200-day SMAs, the **momentum** chart plots CCI(40) against its
      re-entry line (0) and exit line (−100, stepping up to 0 while the 200-day triangular MA
-     falls), and both shade the stretches each filter was OUT. Hover, drag on a phone, or use
+     falls), and both shade the stretches each filter was OUT. On the *Either-on* tab a darker
+     red band also marks when the blend itself was OUT (both filters out → in cash). Hover, drag on a phone, or use
      the arrow keys (Shift = a month) to read any bar; the readout shows the as-of bar otherwise.
    - If the latest bar was pulled **mid-session** it's flagged **⚠ provisional** — it'll be
      replaced by the final daily values the next time the data is refreshed after the close.
