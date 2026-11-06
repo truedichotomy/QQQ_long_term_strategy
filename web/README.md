@@ -15,6 +15,12 @@ Everything runs in your browser; nothing is uploaded.
    - An **"as of" date** next to the tabs computes the signal for any past trading day (handy
      for checking what the call was at, say, the 2008 bottom); **↻ latest** jumps back.
    - Both are deep-linkable and remembered: `index.html?blend=avg&asof=2008-11-20`.
+   - **Filter-history charts** under the signal card show each filter's inputs over a window
+     ending at the as-of date (6M / 1Y / 2Y / 5Y, remembered): the **trend** chart plots the
+     QQQ close with its 50- and 200-day SMAs, the **momentum** chart plots CCI(40) against its
+     re-entry line (0) and exit line (−100, stepping up to 0 while the 200-day triangular MA
+     falls), and both shade the stretches each filter was OUT. Hover, drag on a phone, or use
+     the arrow keys (Shift = a month) to read any bar; the readout shows the as-of bar otherwise.
    - If the latest bar was pulled **mid-session** it's flagged **⚠ provisional** — it'll be
      replaced by the final daily values the next time the data is refreshed after the close.
    - The **default bar mirrors `signal.jl`**: before noon ET it reports the last *completed*
@@ -56,8 +62,9 @@ drop in). End users never need to rebuild anything — they just run the signal,
   `mergeRows`), the indicators (SMA / TMA / CCI from OHLCV), the two component filters
   (`fastReentry`, `cciBandTmaSwitch`), and the blend. A faithful port of
   `analysis/src/{indicators,strategies}.jl`. No DOM — runs in Node too.
-- `app.js` — UI glue: render-on-load from the bundle, drag-drop upload, `localStorage`
-  database (merge + dedupe + persist), status line, reset.
+- `app.js` — UI glue: render-on-load from the bundle, the filter-history SVG charts (drawn at
+  the container's pixel width, redrawn on resize), drag-drop upload, `localStorage` database
+  (merge + dedupe + persist), status line, reset.
 - `build_data.js` — regenerates `data.js` from `data/`.
 - `verify_node.js` — dev check: `node web/verify_node.js` runs `strategy.js` over the real
   `data/` files; its output matches `julia analysis/signal.jl` exactly.

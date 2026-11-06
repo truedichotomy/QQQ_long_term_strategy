@@ -173,6 +173,159 @@
       '<tbody>' + rowsHtml + '</tbody></table></div>';
   }
 
+  // ── Filter-history charts: each filter's inputs and thresholds over a window ending at
+  //    the as-of bar, so the reader can see how the current state came about. Drawn as
+  //    plain SVG at the container's pixel width; a shared crosshair drives one readout
+  //    (which shows the as-of bar when idle, so no value is hover-only). ──
+  var CH_KEY = 'qqq_chart_range', CH_RANGES = [['6M', 0.5], ['1Y', 1], ['2Y', 2], ['5Y', 5]];
+  var chartRange = (function () {
+    try { var v = localStorage.getItem(CH_KEY); if (CH_RANGES.some(function (x) { return x[0] === v; })) return v; } catch (e) {}
+    return '1Y';
+  })();
+  var CC = { close: '#2a78d6', s50: '#eb6834', s200: '#1baf7a', cci: '#2a78d6', entry: '#0a7f3f', exit: '#c1121f',
+             out: 'rgba(193,18,31,0.09)', grid: '#eceef0', axis: '#c7ccd2', xh: '#1f2937' };
+  var PAD = { l: 44, r: 8, t: 8, b: 22 }, MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var CHG = null, chartW = 0;                         // geometry of the last render (crosshair)
+
+  function tmaDown(a, t) { return t >= 20 && !isNaN(a.t200[t]) && !isNaN(a.t200[t - 20]) && a.t200[t] < a.t200[t - 20]; }
+  function momExitAt(a, t) { return tmaDown(a, t) ? 0 : -100; }
+  function niceStep(span, n) {
+    var raw = span / n, p = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10)), f = raw / p;
+    return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+  }
+
+  function chartSvg(o) {   // o: id, label, W, H, k0, i, lo, hi, state (1=IN), refs [{fn,color}], lines [{v,color}], years
+    var a = ANALYSIS, W = o.W, H = o.H, pw = W - PAD.l - PAD.r, ph = H - PAD.t - PAD.b, n = Math.max(o.i - o.k0, 1);
+    var x = function (t) { return PAD.l + (t - o.k0) / n * pw; };
+    var y = function (v) { return PAD.t + (1 - (v - o.lo) / (o.hi - o.lo)) * ph; };
+    var f1 = function (v) { return v.toFixed(1); };
+    var path = function (fn, step) {                   // pen lifts over NaN; `step` draws a stair
+      var d = '', pen = false, pv = NaN;
+      for (var t = o.k0; t <= o.i; t++) {
+        var v = fn(t);
+        if (isNaN(v)) { pen = false; continue; }
+        if (pen && step && v !== pv) d += 'L' + f1(x(t)) + ' ' + f1(y(pv));
+        d += (pen ? 'L' : 'M') + f1(x(t)) + ' ' + f1(y(v)); pen = true; pv = v;
+      }
+      return d;
+    };
+    var s = '<svg class="fc" id="' + o.id + '" tabindex="0" role="img" aria-label="' + o.label + '" viewBox="0 0 ' +
+            W + ' ' + H + '" width="' + W + '" height="' + H + '">';
+    for (var t = o.k0, half = pw / n / 2; t <= o.i; t++) {          // filter-OUT spans
+      if (o.state[t] !== 0) continue;
+      var u = t; while (u < o.i && o.state[u + 1] === 0) u++;
+      var xa = Math.max(PAD.l, x(t) - half), xb = Math.min(PAD.l + pw, x(u) + half);
+      s += '<rect x="' + f1(xa) + '" y="' + PAD.t + '" width="' + f1(Math.max(xb - xa, 1)) + '" height="' + ph + '" fill="' + CC.out + '"/>';
+      t = u;
+    }
+    var step = niceStep(o.hi - o.lo, 4);                             // y grid + labels
+    for (var k = Math.ceil(o.lo / step); k * step <= o.hi; k++) {
+      var yy = f1(y(k * step));
+      s += '<line x1="' + PAD.l + '" x2="' + (PAD.l + pw) + '" y1="' + yy + '" y2="' + yy + '" stroke="' + CC.grid + '"/>' +
+           '<text class="tk" x="' + (PAD.l - 6) + '" y="' + yy + '" dy="3.5" text-anchor="end">' + Math.round(k * step) + '</text>';
+    }
+    s += '<line x1="' + PAD.l + '" x2="' + (PAD.l + pw) + '" y1="' + (PAD.t + ph) + '" y2="' + (PAD.t + ph) + '" stroke="' + CC.axis + '"/>';
+    var mstep = o.years <= 1 ? (pw < 420 ? 2 : 1) : o.years <= 2 ? (pw < 420 ? 6 : 3) : 12;   // x ticks at month starts
+    for (t = o.k0 + 1; t <= o.i; t++) {
+      var ym = a.date[t].slice(0, 7), mo = +ym.slice(5, 7) - 1;
+      if (ym === a.date[t - 1].slice(0, 7) || mo % mstep) continue;
+      var xx = f1(x(t));
+      s += '<line x1="' + xx + '" x2="' + xx + '" y1="' + (PAD.t + ph) + '" y2="' + (PAD.t + ph + 4) + '" stroke="' + CC.axis + '"/>' +
+           '<text class="tk" x="' + xx + '" y="' + (H - 6) + '" text-anchor="middle">' + (mo === 0 || mstep === 12 ? ym.slice(0, 4) : MON[mo]) + '</text>';
+    }
+    o.refs.forEach(function (rf) {
+      s += '<path d="' + path(rf.fn, true) + '" fill="none" stroke="' + rf.color + '" stroke-width="1.5" stroke-dasharray="5 4"/>';
+    });
+    o.lines.forEach(function (ln) {
+      s += '<path d="' + path(function (t) { return ln.v[t]; }) + '" fill="none" stroke="' + ln.color +
+           '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+    });
+    s += '<line class="xh" x1="0" x2="0" y1="' + PAD.t + '" y2="' + (PAD.t + ph) + '" stroke="' + CC.xh + '" stroke-width="1" visibility="hidden"/>';
+    CHG = { k0: o.k0, i: o.i, n: n, pw: pw, W: W };
+    return s + '</svg>';
+  }
+
+  function readoutHtml(t) {
+    var a = ANALYSIS;
+    return '<b>' + esc(a.date[t]) + '</b> · QQQ close <b>' + r(a.close[t], 2) + '</b> · SMA‑50 ' + ri(a.s50[t]) +
+      ' · SMA‑200 ' + ri(a.s200[t]) + ' · trend ' + chip(a.tr[t] === 1) + '<br>CCI(40) <b>' + ri(a.c40[t]) +
+      '</b> · exits below ' + momExitAt(a, t) + ', re‑enters above 0 · momentum ' + chip(a.mom[t] === 1);
+  }
+
+  function renderCharts(g) {
+    var a = ANALYSIS, i = g.index, yrs = CH_RANGES.filter(function (x) { return x[0] === chartRange; })[0][1];
+    var start = new Date(new Date(a.date[i]).getTime() - yrs * 365.25 * 864e5).toISOString().slice(0, 10);
+    var k0 = i; while (k0 > 0 && a.date[k0 - 1] >= start) k0--;
+    if (i - k0 < 10) return '';
+    chartW = out.clientWidth || 700;
+    var W = Math.max(300, chartW), lo = Infinity, hi = -Infinity, clo = -100, chi = 0;
+    for (var t = k0; t <= i; t++) {
+      [a.close[t], a.s50[t], a.s200[t]].forEach(function (v) { if (!isNaN(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); } });
+      if (!isNaN(a.c40[t])) { clo = Math.min(clo, a.c40[t]); chi = Math.max(chi, a.c40[t]); }
+    }
+    var pad = (hi - lo) * 0.05, cpad = (chi - clo) * 0.06;
+    var btns = CH_RANGES.map(function (x) {
+      return '<button data-range="' + x[0] + '"' + (x[0] === chartRange ? ' class="active"' : '') + '>' + x[0] + '</button>';
+    }).join('');
+    return '<div class="fcharts">' +
+      '<div class="fchead"><span class="meta">Filter history — the inputs behind each filter, up to ' + esc(a.date[i]) +
+        ':</span><span class="rng" id="fcrange">' + btns + '</span></div>' +
+      '<div class="fcread" id="fcread">' + readoutHtml(i) + '</div>' +
+      '<div class="fctitle">Trend filter — QQQ close vs its 50‑ and 200‑day averages</div>' +
+      '<div class="fclegend"><span><i style="border-color:' + CC.close + '"></i>QQQ close</span><span><i style="border-color:' +
+        CC.s50 + '"></i>SMA‑50</span><span><i style="border-color:' + CC.s200 + '"></i>SMA‑200</span><span><i class="box"></i>trend filter OUT</span></div>' +
+      chartSvg({ id: 'fc-trend', label: 'QQQ close with 50- and 200-day moving averages', W: W, H: 200, k0: k0, i: i,
+                 lo: lo - pad, hi: hi + pad, state: a.tr, refs: [], years: yrs,
+                 lines: [{ v: a.s200, color: CC.s200 }, { v: a.s50, color: CC.s50 }, { v: a.close, color: CC.close }] }) +
+      '<div class="fcnote">OUT after a death cross (SMA‑50 falls below SMA‑200); back IN when the close reclaims SMA‑50 ' +
+        'or on a golden cross, at least 10 trading days after the last switch.</div>' +
+      '<div class="fctitle">Momentum filter — CCI(40) and its thresholds</div>' +
+      '<div class="fclegend"><span><i style="border-color:' + CC.cci + '"></i>CCI(40)</span><span><i class="dash" style="border-color:' +
+        CC.entry + '"></i>re‑entry (0)</span><span><i class="dash" style="border-color:' + CC.exit +
+        '"></i>exit (−100, or 0 while the 200‑day triangular MA falls)</span><span><i class="box"></i>momentum filter OUT</span></div>' +
+      chartSvg({ id: 'fc-mom', label: 'CCI(40) with its entry and exit thresholds', W: W, H: 170, k0: k0, i: i,
+                 lo: clo - cpad, hi: chi + cpad, state: a.mom, years: yrs, lines: [{ v: a.c40, color: CC.cci }],
+                 refs: [{ fn: function () { return 0; }, color: CC.entry }, { fn: function (t) { return momExitAt(a, t); }, color: CC.exit }] }) +
+      '<div class="fcnote">OUT when CCI(40) closes below the red exit line; back IN when it closes above 0. ' +
+        'Shading marks each filter’s state at that close — trades are acted on the next session.</div>' +
+    '</div>';
+  }
+
+  // Crosshair: pointer or arrow keys on either chart move one hairline across both and
+  // update the readout; leaving (or Esc) returns it to the as-of bar.
+  function wireCharts() {
+    var svgs = ['fc-trend', 'fc-mom'].map($).filter(Boolean), read = $('fcread');
+    if (!CHG || !svgs.length || !read) return;
+    var cur = CHG.i;
+    var show = function (t) {
+      cur = Math.max(CHG.k0, Math.min(CHG.i, t));
+      var xx = (PAD.l + (cur - CHG.k0) / CHG.n * CHG.pw).toFixed(1);
+      svgs.forEach(function (sv) {
+        var l = sv.querySelector('.xh'); if (!l) return;
+        l.setAttribute('x1', xx); l.setAttribute('x2', xx); l.setAttribute('visibility', 'visible');
+      });
+      read.innerHTML = readoutHtml(cur);
+    };
+    var hide = function () {
+      svgs.forEach(function (sv) { var l = sv.querySelector('.xh'); if (l) l.setAttribute('visibility', 'hidden'); });
+      cur = CHG.i; read.innerHTML = readoutHtml(CHG.i);
+    };
+    svgs.forEach(function (sv) {
+      sv.addEventListener('pointermove', function (e) {
+        var rc = sv.getBoundingClientRect(), px = (e.clientX - rc.left) * (CHG.W / rc.width);
+        show(Math.round(CHG.k0 + (px - PAD.l) / CHG.pw * CHG.n));
+      });
+      sv.addEventListener('pointerleave', hide);
+      sv.addEventListener('blur', hide);
+      sv.addEventListener('keydown', function (e) {
+        var step = e.shiftKey ? 21 : 1;
+        if (e.key === 'ArrowLeft') { show(cur - step); e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { show(cur + step); e.preventDefault(); }
+        else if (e.key === 'Escape') hide();
+      });
+    });
+  }
+
   function renderSignal(g) {
     var cls, action, sub, combine;
     if (blend === 'avg') {
@@ -219,10 +372,12 @@
           '<div class="bcombine">' + combine + '</div>' +
         '</div>' +
       '</div>' +
+      renderCharts(g) +
       renderActions(g) +
       '<div class="meta">' + (g.live ? 'QQQ last bars:' : 'QQQ bars up to ' + esc(g.asOf) + ':') + '</div>' +
       '<div class="tablewrap"><table><thead><tr><th>Date</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th></tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody></table></div>';
+    wireCharts();
   }
 
   function applyBlend() {
@@ -307,6 +462,18 @@
       try { localStorage.setItem(BLEND_KEY, blend); } catch (e) {}
       applyBlend();
     });
+  });
+  out.addEventListener('click', function (e) {               // chart range buttons (re-rendered each time)
+    var b = e.target.closest && e.target.closest('#fcrange button');
+    if (!b || !lastG) return;
+    chartRange = b.getAttribute('data-range');
+    try { localStorage.setItem(CH_KEY, chartRange); } catch (err) {}
+    renderSignal(lastG);
+  });
+  var rsz = null;                                            // redraw the charts at the new width
+  window.addEventListener('resize', function () {
+    clearTimeout(rsz);
+    rsz = setTimeout(function () { if (lastG && out.clientWidth !== chartW) renderSignal(lastG); }, 150);
   });
   asofInput.addEventListener('change', function () { if (asofInput.value) renderAt(indexForDate(asofInput.value)); });
   latestBtn.addEventListener('click', function () { renderAt(ANALYSIS.rows.length - 1); });
